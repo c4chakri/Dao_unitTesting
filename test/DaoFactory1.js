@@ -227,11 +227,7 @@ describe("DaoFactory", function () {
             console.log("Dao name..........", _daoName[0]);
 
             expect(_daoName[0]).to.equal(daoName);
-
-
-
-
-
+        
             console.log("Creating Proposal...................Adding memember in dao ", member4.address);
             const pTitle = "Add member proposal";
             const pDescription = "Add member proposal description";
@@ -258,7 +254,6 @@ describe("DaoFactory", function () {
             const proposalReceipt2 = await proposal2.wait();
             const proposalAddress2 = proposalReceipt2.logs[0].args[0];
             console.log("proposalAddress2: ", proposalAddress2);
-
 
             // load proposal contract
 
@@ -382,7 +377,7 @@ describe("DaoFactory", function () {
 
             console.log('\n',"withdraw proposals...............",'\n');
 
-
+        
             
         });
 

@@ -133,17 +133,19 @@ contract DAO is IDAO, ReentrancyGuard {
         tokenDeposited[msg.sender] += _amount;
     }
 
-    function withdrawTokens(address _to, uint256 _amount)
+    function withdrawTokens(address _from, address _to, uint256 _amount)
         external
         nonReentrant
+        canInteractWithDAO(msg.sender)
+
     {
         uint256 balance = governanceToken.balanceOf(address(this));
-        uint256 depBal = tokenDeposited[msg.sender];
+        uint256 depBal = tokenDeposited[_from];
 
         require(depBal >= _amount, "Not enough deposited balance");
         require(balance >= _amount, "Not enough contract balance");
 
-        tokenDeposited[msg.sender] -= _amount;
+        tokenDeposited[_from] -= _amount;
         bool success = governanceToken.transfer(_to, _amount);
         require(success, "Token transfer failed");
     }
@@ -204,7 +206,7 @@ contract DAO is IDAO, ReentrancyGuard {
     {
         _daoSettings = _daoParams;
     }
-
+    // 
     function updateProposalMemberSettings(
         ProposalCreationSettings memory _proposalCreationParams
     ) external _isProposal(msg.sender) {
