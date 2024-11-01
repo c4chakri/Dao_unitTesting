@@ -87,27 +87,22 @@ contract DAO is IDAO, ReentrancyGuard {
         addDAOMembers(_daoMembers);
     }
 
-    function depositToDAOTreasury(uint256 _amount)
-        external
-        payable
-        canInteractWithDAO(msg.sender)
-    {
+    function depositToDAOTreasury(
+        uint256 _amount
+    ) external payable canInteractWithDAO(msg.sender) {
         require(msg.value == _amount, "Incorrect amount sent");
         treasuryBalance[msg.sender] += _amount;
     }
 
-    function withdrawFromDAOTreasury(uint256 amount)
-        external
-        nonReentrant
-        canInteractWithDAO(msg.sender)
-    {
+    function withdrawFromDAOTreasury(
+        address _from,
+        address _to,
+        uint256 amount
+    ) external nonReentrant canInteractWithDAO(msg.sender) {
         require(amount > 0, DAOInvalidAmount());
-        require(
-            treasuryBalance[msg.sender] >= amount,
-            DAOInsufficientBalance()
-        );
-        treasuryBalance[msg.sender] -= amount;
-        payable(msg.sender).transfer(amount);
+        require(treasuryBalance[_from] >= amount, DAOInsufficientBalance());
+        treasuryBalance[_from] -= amount;
+        payable(_to).transfer(amount);
     }
 
     function depositTokens(uint256 _amount) external {
@@ -133,12 +128,11 @@ contract DAO is IDAO, ReentrancyGuard {
         tokenDeposited[msg.sender] += _amount;
     }
 
-    function withdrawTokens(address _from, address _to, uint256 _amount)
-        external
-        nonReentrant
-        canInteractWithDAO(msg.sender)
-
-    {
+    function withdrawTokens(
+        address _from,
+        address _to,
+        uint256 _amount
+    ) external nonReentrant canInteractWithDAO(msg.sender) {
         uint256 balance = governanceToken.balanceOf(address(this));
         uint256 depBal = tokenDeposited[_from];
 
@@ -193,20 +187,19 @@ contract DAO is IDAO, ReentrancyGuard {
         isProposal[proposalAddress] = true;
     }
 
-    function updateGovernanceSettings(GovernanceSettings memory _newSettings)
-        external
-        _isProposal(msg.sender)
-    {
+    function updateGovernanceSettings(
+        GovernanceSettings memory _newSettings
+    ) external _isProposal(msg.sender) {
         governanceSettings = _newSettings;
     }
 
-    function updateDaoSettings(DaoSettings memory _daoParams)
-        external
-        _isProposal(msg.sender)
-    {
+    function updateDaoSettings(
+        DaoSettings memory _daoParams
+    ) external _isProposal(msg.sender) {
         _daoSettings = _daoParams;
     }
-    // 
+
+    //
     function updateProposalMemberSettings(
         ProposalCreationSettings memory _proposalCreationParams
     ) external _isProposal(msg.sender) {
@@ -215,12 +208,9 @@ contract DAO is IDAO, ReentrancyGuard {
 
     // ***********************************************************************************
 
-    function canInteract(address _account)
-        external
-        view
-        canInteractWithDAO(_account)
-        returns (bool)
-    {
+    function canInteract(
+        address _account
+    ) external view canInteractWithDAO(_account) returns (bool) {
         return true;
     }
 }

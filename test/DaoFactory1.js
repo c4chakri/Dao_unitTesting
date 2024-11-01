@@ -86,21 +86,44 @@ describe("DaoFactory", function () {
         // Return the action tuple array wrapped in another array
         return JSON.stringify([[action]]); // Ensures the return type is [[action]]
     }
-    async function encodeWithdrawFromDAOTreasury(amount) {
+    async function encodeWithdrawFromDAOTreasury(daoAddr,_from, _to, amount) {
         // ABI of the DAO contract containing the `withdrawFromDAOTreasury` function
         const daoABI = [
-            "function withdrawFromDAOTreasury(uint256 amount)"
+            "function withdrawFromDAOTreasury(address _from,address _to,uint256 amount)"
         ];
-    
+
         // Create an interface from the ABI
         const daoInterface = new ethers.Interface(daoABI);
-    
-        // Encode the function data for `withdrawFromDAOTreasury`
-        const encodedData = daoInterface.encodeFunctionData("withdrawFromDAOTreasury", [amount]);
-    
-        return encodedData;
-    }
 
+        // Encode the function data for `withdrawFromDAOTreasury`
+        const encodedData = daoInterface.encodeFunctionData("withdrawFromDAOTreasury", [_from, _to, amount]);
+        const action = [
+            daoAddr, // Address of the contract
+            0, // Value in wei to send (usually 0 for function calls)
+            encodedData // Encoded function data
+        ]
+        return JSON.stringify([action]);
+    }
+    async function encodeWithdrawTokens(daoAddr, from, to, amount) {
+        // ABI of the DAO contract containing the `withdrawTokens` function
+        const daoABI = [
+            "function withdrawTokens(address _from, address _to, uint256 _amount)"
+        ];
+
+        // Create an interface from the ABI
+        const daoInterface = new ethers.Interface(daoABI);
+
+        // Encode the function data for `withdrawTokens`
+        const encodedData = daoInterface.encodeFunctionData("withdrawTokens", [from, to, amount]);
+
+        const action = [
+            daoAddr, // Address of the contract
+            0, // Value in wei to send (usually 0 for function calls)
+            encodedData // Encoded function data
+        ]
+
+        return JSON.stringify([action]);
+    }
 
     async function deployDaoFactoryFixture() {
         const DaoFactory = await ethers.getContractFactory("DAOFactory");
@@ -227,7 +250,7 @@ describe("DaoFactory", function () {
             console.log("Dao name..........", _daoName[0]);
 
             expect(_daoName[0]).to.equal(daoName);
-        
+
             console.log("Creating Proposal...................Adding memember in dao ", member4.address);
             const pTitle = "Add member proposal";
             const pDescription = "Add member proposal description";
@@ -370,15 +393,96 @@ describe("DaoFactory", function () {
 
             // Verify the balance in the contract if needed
             const treasuryBalance = await daoContract.treasuryBalance(member1.address);
-            console.log('\n',"Deposit  Balance by ", member1.address, ": ", treasuryBalance);
-            
+            console.log('\n', "Deposit  Balance by ", member1.address, ": ", treasuryBalance);
+
             expect(treasuryBalance).to.equal(depositAmount);
 
 
-            console.log('\n',"withdraw proposals...............",'\n');
+            console.log('\n', "withdraw token proposals...............", '\n');
 
-        
-            
+            const withdrawAction = await encodeWithdrawTokens(daoAddress, member1.address, member2.address, 1);
+            // console.log("withdrawAction: ", withdrawAction);
+
+            // create proposal for withdraw tokens
+            const pTitle5 = "Withdraw Tokens";
+            const pDescription5 = "Withdraw Tokens";
+            const pStartTime5 = Math.floor(Date.now() / 1000); // 0 seconds since epoch
+            const pDuration5 = 3600; // 1 hour duration
+            const pActionId5 = 1;
+            const pActions5 = [["0x75537828f2ce51be7289709686a69cbfdbb714f1", 0, "0x5e35359e000000000000000000000000f39fd6e51aad88f6f4ce6ab8827279cfffb9226600000000000000000000000070997970c51812dc3a010c7d01b50e0d17dc79c80000000000000000000000000000000000000000000000000000000000000001"]];
+
+            const proposal5 = await daoManagement.createProposal(daoAddress, pTitle5, pDescription5, pStartTime5, pDuration5, pActionId5, pActions5);
+
+            const proposalReceipt5 = await proposal5.wait();
+            const proposalAddress5 = proposalReceipt5.logs[0].args[0];
+            console.log("proposalAddress5: ", proposalAddress5);
+
+            // load proposal contract
+            const proposalContract5 = await ethers.getContractAt("Proposal", proposalAddress5);
+
+            await proposalContract5.connect(member1).vote(1);
+            await proposalContract5.connect(member2).vote(2);
+            await proposalContract5.connect(member3).vote(1);
+            await proposalContract5.connect(member4).vote(2);
+
+            console.log("Yes votes", await proposalContract5.yesVotes());
+            console.log("No votes", await proposalContract5.noVotes());
+
+            console.log("approved", await proposalContract5.approved());
+            // check balance before withdraw 
+
+            const _member2Balance = await governanceTokenContract.balanceOf(member2.address);
+            console.log('\n', "Member2 Balance: ", _member2Balance);
+            await proposalContract5.connect(member4).executeProposal();
+            console.log("executed", await proposalContract5.executed());
+
+            // check tokens after withdraw
+
+            var memberFundBalance = await daoContract.treasuryBalance(member1.address);
+            console.log('\n', "Member1 Balance before withdraw: ", memberFundBalance);
+
+
+            console.log('\n', "withdraw funds proposals...............", '\n');
+
+            const withdrawFundsAction = await encodeWithdrawFromDAOTreasury(daoAddress, member1.address, member2.address, 1);
+            // console.log("withdrawFundsAction: ", withdrawFundsAction);
+
+            // create proposal for withdraw funds
+            const pTitle6 = "Withdraw Funds";
+            const pDescription6 = "Withdraw Funds";
+            const pStartTime6 = Math.floor(Date.now() / 1000); // 0 seconds since epoch
+            const pDuration6 = 3600; // 1 hour duration
+            const pActionId6 = 1;
+            const pActions6 =  [["0x75537828f2ce51be7289709686a69cbfdbb714f1",0,"0x5e45ad8b000000000000000000000000f39fd6e51aad88f6f4ce6ab8827279cfffb9226600000000000000000000000070997970c51812dc3a010c7d01b50e0d17dc79c80000000000000000000000000000000000000000000000000000000000000001"]];
+
+            const proposal6 = await daoManagement.createProposal(daoAddress, pTitle6, pDescription6, pStartTime6, pDuration6, pActionId6, pActions6);
+
+            const proposalReceipt6 = await proposal6.wait();
+            const proposalAddress6 = proposalReceipt6.logs[0].args[0];
+            console.log("proposalAddress6: ", proposalAddress6);
+
+            // load proposal contract
+            const proposalContract6 = await ethers.getContractAt("Proposal", proposalAddress6);
+
+            await proposalContract6.connect(member1).vote(1);
+            await proposalContract6.connect(member2).vote(2);
+            await proposalContract6.connect(member3).vote(1);
+            await proposalContract6.connect(member4).vote(2);
+
+            console.log("Yes votes", await proposalContract6.yesVotes());
+            console.log("No votes", await proposalContract6.noVotes());
+
+            console.log("approved", await proposalContract6.approved());
+
+            await proposalContract6.connect(member4).executeProposal();
+            console.log("executed", await proposalContract6.executed());
+
+            // check the funds balance after withdraw
+
+            memberFundBalance = await daoContract.treasuryBalance(member1.address);
+            console.log('\n', "Member1 Balance after withdraw: ", memberFundBalance);
+
+           
         });
 
     });

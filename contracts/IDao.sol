@@ -36,17 +36,26 @@ interface IDAO {
         bytes data;
     }
 
-     struct ProposalCreationSettings {
+    struct ProposalCreationSettings {
         bool isTokenBasedProposal;
         uint256 MinimumRequirement;
     }
+
     // function getAllProposals() external view returns (ProposalInfo[] memory);
     // function depositToDAOTreasury(uint256 amount) external payable ;
     // function withdrawFromDAOTreasury(uint256 amount) external ;
-   
-    function depositToDAOTreasury(uint256 _amount) external payable;
-    function withdrawFromDAOTreasury(uint256 _amount) external;
-    function depositTokens(uint256 _amount) external;
-    function withdrawTokens(address _to, uint256 _amount) external;
 
+    function depositToDAOTreasury(uint256 _amount) external payable;
+
+    
+    function withdrawFromDAOTreasury(address _from,address _to,uint256 amount)
+        external;
+
+    function depositTokens(uint256 _amount) external;
+
+    function withdrawTokens(
+        address _from,
+        address _to,
+        uint256 _amount
+    ) external;
 }
