@@ -22,6 +22,7 @@ contract DaoManagement {
         Proposal newProposal = new Proposal(
             _daoAddress,
             msg.sender,
+            2,
             _title,
             _description,
             _startTime,

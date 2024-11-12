@@ -76,9 +76,10 @@ contract DAO is IDAO, ReentrancyGuard {
             //     governanceToken.isFreshGovernanceToken(),
             //     NotAFreshGovernanceToken()
             // );
-            governanceSettings = _governanceSettings;
             governanceToken.setDAOAddress(address(this));
         }
+            governanceSettings = _governanceSettings;
+
         _daoSettings = _daoParams;
 
         _proposalCreationSettings = _proposalCreationParams;
@@ -98,7 +99,7 @@ contract DAO is IDAO, ReentrancyGuard {
         address _from,
         address _to,
         uint256 amount
-    ) external nonReentrant canInteractWithDAO(msg.sender) {
+    ) external nonReentrant _isProposal(msg.sender) {
         require(amount > 0, DAOInvalidAmount());
         require(treasuryBalance[_from] >= amount, DAOInsufficientBalance());
         treasuryBalance[_from] -= amount;
@@ -132,7 +133,7 @@ contract DAO is IDAO, ReentrancyGuard {
         address _from,
         address _to,
         uint256 _amount
-    ) external nonReentrant canInteractWithDAO(msg.sender) {
+    ) external nonReentrant _isProposal(msg.sender) {
         uint256 balance = governanceToken.balanceOf(address(this));
         uint256 depBal = tokenDeposited[_from];
 

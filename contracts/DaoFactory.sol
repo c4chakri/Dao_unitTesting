@@ -12,7 +12,7 @@ contract DAOFactory is Initializable, UUPSUpgradeable, OwnableUpgradeable, IDAOF
     uint32 public daoId;
     mapping(uint32 => DAOInfo) public daos;
     address public daoManagement;
-
+    event daoCreated(address daoAddress);
     function initialize(address _daoManagement) public initializer {
         __Ownable_init(msg.sender);
         __UUPSUpgradeable_init();
@@ -47,6 +47,8 @@ contract DAOFactory is Initializable, UUPSUpgradeable, OwnableUpgradeable, IDAOF
         dao.daoCreator = msg.sender;
         dao.governanceAddress = address(newDAO.governanceToken());
         daoId++;
+
+        emit daoCreated(address(newDAO));
     }
 
     function version() external pure returns (string memory) {

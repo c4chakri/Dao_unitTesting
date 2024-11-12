@@ -26,9 +26,11 @@ contract Proposal is IProposal {
     bool public executed;
     bool public approved;
     bool public earlyExecution;
-
+    bool public canVoteChange;
     DAO public dao;
     Action[] public actions;
+
+    uint256 public minApproval;
 
     mapping(address => bool) public hasVoted;
 
@@ -43,7 +45,7 @@ contract Proposal is IProposal {
     error VotingEnded();
     error ProposalNotApproved();
     error ActionExecutionFailed();
-    
+
     modifier canVote() {
         require(dao.canInteract(msg.sender), UnAuthorized());
         require(status > 0, ProposalNotExist());
@@ -63,6 +65,7 @@ contract Proposal is IProposal {
     constructor(
         address _daoAddress,
         address _proposerAddress,
+        uint256 _minApproval,
         string memory _title,
         string memory _description,
         uint32 _startTime,
@@ -107,7 +110,7 @@ contract Proposal is IProposal {
         supportThresholdPercentage = _supportThresholdPercentage;
         minimumDurationForProposal = _minimumDurationForProposal;
         earlyExecution = _earlyExecution;
-
+        canVoteChange = _canVoteChange;
         status = 1;
 
         for (uint8 i = 0; i < _actions.length; i++) {
@@ -144,11 +147,12 @@ contract Proposal is IProposal {
         hasVoted[msg.sender] = true;
 
         if (dao.isMultiSignDAO()) {
-            uint256 totalMembers = dao.membersCount();
-            uint256 yesVotesPercentage = (yesVotes * (100)) / totalMembers;
+            // uint256 totalMembers = dao.membersCount();
 
-            if (yesVotesPercentage >= supportThresholdPercentage) {
-                approved = yesVotes > noVotes;
+            // uint256 yesVotesPercentage = (yesVotes * (100)) / totalMembers;
+            // uint256 approval = minApproval 
+            if (yesVotes >= minApproval) {
+                approved = true;
                 status = 2; // Approved
             } else {
                 approved = false;
