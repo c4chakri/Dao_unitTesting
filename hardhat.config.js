@@ -17,7 +17,7 @@ module.exports = {
     },
     sepolia: {
       url: "https://sepolia.infura.io/v3/4cf6fddedfd54da5bde77099cbfc6c41",
-      accounts: ["a15d5becf529dfc7b4ada8751748f3703fe177f71e0aa27fb0cdc00148899f74"]
+      accounts: ["pvtKey"]
     }
   },
   etherscan: {
