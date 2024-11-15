@@ -58,6 +58,32 @@ describe("DaoFactory", function () {
         // Return the action tuple array
         return JSON.stringify([action]);
     }
+
+    async function createRemoveDAOMembersAction(daoAddr, members) {
+        // Define the ABI fragment for the `removeDAOMembers` function
+        const abiFragment = [
+            "function removeDAOMembers((address memberAddress, uint256 deposit)[] members) external"
+        ];
+    
+        // Create the interface for the function
+        const iface = new ethers.Interface(abiFragment);
+    
+        // Encode the function call with the array of structs as a parameter
+        const encodedData = iface.encodeFunctionData('removeDAOMembers', [members]);
+    
+        // Create the Action tuple array
+        const action = [
+            daoAddr, // Address of the DAO contract
+            0,       // Value in wei to send (usually 0 for function calls)
+            encodedData // Encoded function data
+        ];
+    
+        // Return the action tuple array
+        return JSON.stringify([action]);
+    }
+    
+
+
     async function createUpdateProposalMemberSettingsAction(daoAddr, isTokenBasedProposal, minimumRequirement) {
         // Define the contract's ABI fragment for the `updateProposalMemberSettings` function
         const abiFragment = [
@@ -207,7 +233,7 @@ async function deployActionExecutor() {
             console.log("Creating Proposal...................Dao name set title is : ", daoName);
 
 
-            const proposal1 = await daoManagement.createProposal(daoAddress, _title, _description, _startTime, _duration, actionId, _actions);
+            const proposal1 = await daoManagement.createProposal(daoAddress, _title, _description, 2,_startTime, _duration, actionId, _actions);
             // console.log("proposal1: ", proposal1);
 
 
@@ -279,7 +305,7 @@ async function deployActionExecutor() {
 
             pActions = [[daoAddress, 0, "0xb91835150000000000000000000000000000000000000000000000000000000000000020000000000000000000000000000000000000000000000000000000000000000100000000000000000000000090f79bf6eb2c4f870365e785982e1f101e93b9060000000000000000000000000000000000000000000000000000000000000064"]]
 
-            const proposal2 = await daoManagement.createProposal(daoAddress, pTitle, pDescription, pStartTime, pDuration, pActionId, pActions);
+            const proposal2 = await daoManagement.createProposal(daoAddress, pTitle, pDescription, 2,pStartTime, pDuration, pActionId, pActions);
 
             const proposalReceipt2 = await proposal2.wait();
             const proposalAddress2 = proposalReceipt2.logs[0].args[0];
@@ -323,16 +349,16 @@ async function deployActionExecutor() {
             const isTokenBased = true; // Example: token-based proposal
             const minimumRequirement = 27; // Example minimum requirement
 
-            const pTitle1 = "Update proposal member settings";
             const pDescription1 = "Update proposal member settings description";
-            const pStartTime1 = Math.floor(Date.now() / 1000); // current time as UNIX timestamp
-            const pDuration1 = 3600; // 1 hour duration
-            const pActionId1 = 3;
+            let pTitle1 = "Update proposal member settings";
+            let pStartTime1 = Math.floor(Date.now() / 1000); // current time as UNIX timestamp
+            let pDuration1 = 3600; // 1 hour duration
+            let pActionId1 = 3;
             // const pActions1 = await createUpdateProposalMemberSettingsAction(daoAddress, isTokenBased, minimumRequirement);
-            const pActions1 = [[daoAddress, 0, "0x132da92d0000000000000000000000000000000000000000000000000000000000000001000000000000000000000000000000000000000000000000000000000000001b"]]
+            let pActions1 = [[daoAddress, 0, "0x132da92d0000000000000000000000000000000000000000000000000000000000000001000000000000000000000000000000000000000000000000000000000000001b"]]
 
 
-            const proposal3 = await daoManagement.connect(member4).createProposal(daoAddress, pTitle1, pDescription1, pStartTime1, pDuration1, pActionId1, pActions1);
+            const proposal3 = await daoManagement.connect(member4).createProposal(daoAddress, pTitle1, pDescription1,2, pStartTime1, pDuration1, pActionId1, pActions1);
 
             const proposalReceipt3 = await proposal3.wait();
             const proposalAddress3 = proposalReceipt3.logs[0].args[0];
@@ -418,7 +444,7 @@ async function deployActionExecutor() {
             const pActionId5 = 1;
             const pActions5 = [["0x75537828f2ce51be7289709686a69cbfdbb714f1", 0, "0x5e35359e000000000000000000000000f39fd6e51aad88f6f4ce6ab8827279cfffb9226600000000000000000000000070997970c51812dc3a010c7d01b50e0d17dc79c80000000000000000000000000000000000000000000000000000000000000001"]];
 
-            const proposal5 = await daoManagement.createProposal(daoAddress, pTitle5, pDescription5, pStartTime5, pDuration5, pActionId5, pActions5);
+            const proposal5 = await daoManagement.createProposal(daoAddress, pTitle5, pDescription5,2, pStartTime5, pDuration5, pActionId5, pActions5);
 
             const proposalReceipt5 = await proposal5.wait();
             const proposalAddress5 = proposalReceipt5.logs[0].args[0];
@@ -462,7 +488,7 @@ async function deployActionExecutor() {
             const pActionId6 = 1;
             const pActions6 =  [["0x75537828f2ce51be7289709686a69cbfdbb714f1",0,"0x5e45ad8b000000000000000000000000f39fd6e51aad88f6f4ce6ab8827279cfffb9226600000000000000000000000070997970c51812dc3a010c7d01b50e0d17dc79c80000000000000000000000000000000000000000000000000000000000000001"]];
 
-            const proposal6 = await daoManagement.createProposal(daoAddress, pTitle6, pDescription6, pStartTime6, pDuration6, pActionId6, pActions6);
+            const proposal6 = await daoManagement.createProposal(daoAddress, pTitle6, pDescription6, 2,pStartTime6, pDuration6, pActionId6, pActions6);
 
             const proposalReceipt6 = await proposal6.wait();
             const proposalAddress6 = proposalReceipt6.logs[0].args[0];
@@ -493,7 +519,7 @@ async function deployActionExecutor() {
            
         });
 
-        it("Should create a new dao flows", async function () {
+        it("Should create a multisig new dao flows", async function () {
             const { daoFactory } = await loadFixture(deployDaoFactoryFixture);
             const [member1, member2, member3, member4] = await ethers.getSigners();
             const daoSettings = ["mike", "0x68656c6c6f20776f726c64"];
@@ -563,7 +589,7 @@ async function deployActionExecutor() {
             console.log("Creating Proposal...................Dao name set title is : ", daoName);
 
 
-            const proposal1 = await daoManagement.createProposal(daoAddress, _title, _description, _startTime, _duration, actionId, _actions);
+            const proposal1 = await daoManagement.createProposal(daoAddress, _title, _description,2, _startTime, _duration, actionId, _actions);
             // console.log("proposal1: ", proposal1);
 
 
@@ -635,7 +661,7 @@ async function deployActionExecutor() {
 
             pActions = [[daoAddress, 0, "0xb91835150000000000000000000000000000000000000000000000000000000000000020000000000000000000000000000000000000000000000000000000000000000100000000000000000000000090f79bf6eb2c4f870365e785982e1f101e93b9060000000000000000000000000000000000000000000000000000000000000064"]]
 
-            const proposal2 = await daoManagement.createProposal(daoAddress, pTitle, pDescription, pStartTime, pDuration, pActionId, pActions);
+            const proposal2 = await daoManagement.createProposal(daoAddress, pTitle, pDescription, 2,pStartTime, pDuration, pActionId, pActions);
 
             const proposalReceipt2 = await proposal2.wait();
             const proposalAddress2 = proposalReceipt2.logs[0].args[0];
@@ -678,6 +704,67 @@ async function deployActionExecutor() {
             console.log("is daoMember ",member4.address, await daoC.isDAOMember(member4.address));
             
 
+// Remove dao members
+
+            console.log("Creating Proposal...................Removing memember in dao ", member4.address);
+             pRemoveTitle = "Remove member proposal";
+            let  pRemoveDescription1 = "Remove member proposal description";
+             pRemoveStartTime1 = Math.floor(Date.now() / 1000); // current time as UNIX timestamp
+             pRemoveDuration1 = 3600; // 1 hour duration
+             pRemoveActionId1 = 2;
+             pRemoveActions1 = [];
+             RemoveMembers = [
+                {
+                    memberAddress: "0x90F79bf6EB2c4f870365E785982E1f101E93b906",  // Example member address
+                    deposit: "0" // Example deposit (1 Ether)
+                }
+            ];
+
+            await createRemoveDAOMembersAction(daoAddress, RemoveMembers).then((action) => {
+                pRemoveActions1 = action
+            });
+            console.log("pActions of remove members: ", pRemoveActions1);
+
+            pRemoveActions1 =[[daoAddress,0,"0xbf3adaec0000000000000000000000000000000000000000000000000000000000000020000000000000000000000000000000000000000000000000000000000000000100000000000000000000000090f79bf6eb2c4f870365e785982e1f101e93b9060000000000000000000000000000000000000000000000000000000000000000"]]
+
+             RemoveProposal3 = await daoManagement.createProposal(daoAddress, pRemoveTitle, pRemoveDescription1, 2,pRemoveStartTime1, pRemoveDuration1, pRemoveActionId1, pRemoveActions1);
+
+            let  proposalRemoveReceipt3 = await RemoveProposal3.wait();
+            let  proposalRemoveAddress3 = proposalRemoveReceipt3.logs[0].args[0];
+             console.log("proposalAddress3: ", proposalRemoveAddress3);
+
+             // load proposal contract
+
+            let proposalRemoveContract3 = await ethers.getContractAt("Proposal", proposalRemoveAddress3);
+             console.log("Proposal Title : ", await proposalRemoveContract3.proposalTitle());
+             const endTimeInSeconds_1 = Number(await proposalRemoveContract3.endTime()); // Convert BigInt to regular number
+
+             // Convert to a JavaScript Date object (Unix timestamp in seconds -> milliseconds)
+              endDate2_ = new Date(endTimeInSeconds_1 * 1000);
+
+             console.log("Proposal End Date:", endDate2_.toLocaleString()); // Outputs in a readable format
+             console.log("Yes votes", await proposalRemoveContract3.yesVotes());
+             console.log("No votes", await proposalRemoveContract3.noVotes());    
+
+             console.log("voting...............started");
+
+             await proposalRemoveContract3.connect(member1).vote(1);
+             await proposalRemoveContract3.connect(member2).vote(1);
+
+             console.log("Yes votes", await proposalRemoveContract3.yesVotes());
+             console.log("No votes", await proposalRemoveContract3.noVotes());
+
+             console.log("approved", await proposalRemoveContract3.approved());
+             console.log("executed", await proposalRemoveContract3.executed());
+
+             console.log("execution...............started");
+             console.log("Early Execution : ",await proposalRemoveContract3.earlyExecution());
+            
+             await proposalRemoveContract3.connect(member1).executeProposal();
+             console.log("executed", await proposalRemoveContract3.executed());
+
+             console.log("is daoMember ",member4.address, await daoC.isDAOMember(member4.address));
+
 
             console.log("Creating Proposal...................Update proposal member settings ", member4.address);
             const isTokenBased = true; // Example: token-based proposal
@@ -692,7 +779,7 @@ async function deployActionExecutor() {
             const pActions1 = [[daoAddress, 0, "0x132da92d0000000000000000000000000000000000000000000000000000000000000001000000000000000000000000000000000000000000000000000000000000001b"]]
 
 
-            const proposal3 = await daoManagement.connect(member4).createProposal(daoAddress, pTitle1, pDescription1, pStartTime1, pDuration1, pActionId1, pActions1);
+            const proposal3 = await daoManagement.connect(member3).createProposal(daoAddress, pTitle1, pDescription1, 2,pStartTime1, pDuration1, pActionId1, pActions1);
 
             const proposalReceipt3 = await proposal3.wait();
             const proposalAddress3 = proposalReceipt3.logs[0].args[0];
@@ -721,14 +808,13 @@ async function deployActionExecutor() {
             await proposalContract3.connect(member1).vote(1);
             await proposalContract3.connect(member2).vote(2);
             await proposalContract3.connect(member3).vote(1);
-            await proposalContract3.connect(member4).vote(2);
 
             console.log("Yes votes", await proposalContract3.yesVotes());
             console.log("No votes", await proposalContract3.noVotes());
 
             console.log("approved", await proposalContract3.approved());
 
-            await proposalContract3.connect(member4).executeProposal();
+            await proposalContract3.connect(member2).executeProposal();
             console.log("executed", await proposalContract3.executed());
             console.log("result : ",);
             

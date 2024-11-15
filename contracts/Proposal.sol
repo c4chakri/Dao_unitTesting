@@ -77,6 +77,7 @@ contract Proposal is IProposal {
         dao = DAO(daoAddress);
         governanceTokenAddress = address(dao.governanceToken());
         proposerAddress = _proposerAddress;
+        minApproval = _minApproval;
         (bool isTokenBased, uint256 miniReqToken) = dao
             ._proposalCreationSettings();
         require(dao.canInteract(_proposerAddress), UnAuthorized());

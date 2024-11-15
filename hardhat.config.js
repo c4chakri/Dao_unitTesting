@@ -1,5 +1,7 @@
 require("@nomicfoundation/hardhat-toolbox");
 require('@openzeppelin/hardhat-upgrades');
+require("@nomicfoundation/hardhat-verify");
+
 /** @type import('hardhat/config').HardhatUserConfig */
 module.exports = {
   solidity: "0.8.28",
@@ -13,9 +15,15 @@ module.exports = {
     hardhat: {
       allowUnlimitedContractSize: true,
     },
-    // sepolia: {
-    //   url: "https://sepolia.infura.io/v3/9aa3d95b3bc440fa88ea12eaa4456161",
-    //   accounts: [process.env.PRIVATE_KEY],
-    // },
+    sepolia: {
+      url: "https://sepolia.infura.io/v3/4cf6fddedfd54da5bde77099cbfc6c41",
+      accounts: ["a15d5becf529dfc7b4ada8751748f3703fe177f71e0aa27fb0cdc00148899f74"]
+    }
+  },
+  etherscan: {
+    apiKey: "NCK76P88P8MFMTQE66ZQ8XKVRAX6337NHC"
+  },
+  sourcify: {
+    enabled: true
   }
 };

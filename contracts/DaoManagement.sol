@@ -14,6 +14,7 @@ contract DaoManagement {
         address _daoAddress,
         string memory _title,
         string memory _description,
+        uint256 _minApproval,
         uint32 _startTime,
         uint32 _duration,
         uint8 actionId,
@@ -22,7 +23,7 @@ contract DaoManagement {
         Proposal newProposal = new Proposal(
             _daoAddress,
             msg.sender,
-            2,
+            _minApproval,
             _title,
             _description,
             _startTime,

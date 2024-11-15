@@ -52,6 +52,6 @@ contract DAOFactory is Initializable, UUPSUpgradeable, OwnableUpgradeable, IDAOF
     }
 
     function version() external pure returns (string memory) {
-        return "0.2.1";
+        return "0.2.3";
     }
 }

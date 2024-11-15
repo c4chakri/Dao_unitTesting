@@ -78,7 +78,7 @@ contract DAO is IDAO, ReentrancyGuard {
             // );
             governanceToken.setDAOAddress(address(this));
         }
-            governanceSettings = _governanceSettings;
+        governanceSettings = _governanceSettings;
 
         _daoSettings = _daoParams;
 
@@ -88,9 +88,11 @@ contract DAO is IDAO, ReentrancyGuard {
         addDAOMembers(_daoMembers);
     }
 
-    function depositToDAOTreasury(
-        uint256 _amount
-    ) external payable canInteractWithDAO(msg.sender) {
+    function depositToDAOTreasury(uint256 _amount)
+        external
+        payable
+        canInteractWithDAO(msg.sender)
+    {
         require(msg.value == _amount, "Incorrect amount sent");
         treasuryBalance[msg.sender] += _amount;
     }
@@ -165,6 +167,20 @@ contract DAO is IDAO, ReentrancyGuard {
         }
     }
 
+    function removeDAOMembers(DAOMember[] memory members) public {
+        require(isMultiSignDAO,DAOUnAuthorizedInteraction());
+        require(isProposal[msg.sender] || isDAOMember[msg.sender], DAOUnAuthorizedInteraction());
+
+        for (uint32 i = 0; i < members.length; i++) {
+            address memberAddress = members[i].memberAddress;
+
+            if (isDAOMember[memberAddress]) {
+                isDAOMember[memberAddress] = false;
+                --membersCount;
+            }
+        }
+    }
+
     function configureProposal(
         address proposalAddress,
         address _proposerAddress,
@@ -188,15 +204,17 @@ contract DAO is IDAO, ReentrancyGuard {
         isProposal[proposalAddress] = true;
     }
 
-    function updateGovernanceSettings(
-        GovernanceSettings memory _newSettings
-    ) external _isProposal(msg.sender) {
+    function updateGovernanceSettings(GovernanceSettings memory _newSettings)
+        external
+        _isProposal(msg.sender)
+    {
         governanceSettings = _newSettings;
     }
 
-    function updateDaoSettings(
-        DaoSettings memory _daoParams
-    ) external _isProposal(msg.sender) {
+    function updateDaoSettings(DaoSettings memory _daoParams)
+        external
+        _isProposal(msg.sender)
+    {
         _daoSettings = _daoParams;
     }
 
@@ -209,9 +227,12 @@ contract DAO is IDAO, ReentrancyGuard {
 
     // ***********************************************************************************
 
-    function canInteract(
-        address _account
-    ) external view canInteractWithDAO(_account) returns (bool) {
+    function canInteract(address _account)
+        external
+        view
+        canInteractWithDAO(_account)
+        returns (bool)
+    {
         return true;
     }
 }
