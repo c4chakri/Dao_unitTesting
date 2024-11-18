@@ -8,7 +8,7 @@
  */
 pragma solidity ^0.8.21;
 
-import {GovernanceToken, ReentrancyGuard, AccessControl} from "./GovernanceToken.sol";
+import {GovernanceToken, ReentrancyGuard, AccessControl,ERC20} from "./GovernanceToken.sol";
 import {IDAO} from "./IDao.sol";
 import {DaoManagement} from "./DaoManagement.sol";
 
@@ -88,7 +88,9 @@ contract DAO is IDAO, ReentrancyGuard {
     /**
      * @dev Mapping of addresses to the amount of tokens deposited.
      */
-    mapping(address => uint256) public tokenDeposited;
+    mapping(address => mapping (address => uint256)) public tokenDeposited;
+
+    mapping (address=> uint256) public  tokensDeposited;
 
     // Custom error messages for specific conditions in the DAO contract
     error DAOBlacklistedAddress();
@@ -189,15 +191,17 @@ contract DAO is IDAO, ReentrancyGuard {
     }
 
     /**
-     * @dev Deposits governance tokens into the DAO.
+     * @dev Deposits ERC20 tokens into the DAO.
+     * @param _token ERC20 Token to deposit
      * @param _amount Amount of tokens to deposit.
      */
-    function depositTokens(uint256 _amount) external {
+    function depositTokens(address _token,uint256 _amount) external {
+        ERC20 token = ERC20(_token);
         require(
-            governanceToken.balanceOf(msg.sender) >= _amount,
+            token.balanceOf(msg.sender) >= _amount,
             "Not enough funds"
         );
-        uint256 allowance = governanceToken.allowance(
+        uint256 allowance = token.allowance(
             msg.sender,
             address(this)
         );
@@ -205,32 +209,37 @@ contract DAO is IDAO, ReentrancyGuard {
             allowance >= _amount,
             DAOInsufficientAllowanceGovernanceToken()
         );
-        bool success = governanceToken.transferFrom(
+
+        bool success = token.transferFrom(
             msg.sender,
             address(this),
             _amount
         );
+
         require(success, "Token transfer failed");
-        tokenDeposited[msg.sender] += _amount;
+        tokenDeposited[_token][msg.sender] += _amount;
     }
 
     /**
      * @dev Withdraws governance tokens from the DAO.
+     * @param _token The address ERC20 Token which are deposited in DAO
      * @param _from The address from which tokens are withdrawn.
      * @param _to The recipient address.
      * @param _amount The amount to withdraw.
      */
     function withdrawTokens(
+        address _token,
         address _from,
         address _to,
         uint256 _amount
     ) external nonReentrant _isProposal(msg.sender) {
-        uint256 balance = governanceToken.balanceOf(address(this));
-        uint256 depBal = tokenDeposited[_from];
+        ERC20 token = ERC20(_token);
+        uint256 balance = token.balanceOf(address(this));
+        uint256 depBal = tokenDeposited[_token][_from];
         require(depBal >= _amount, "Not enough deposited balance");
         require(balance >= _amount, "Not enough contract balance");
-        tokenDeposited[_from] -= _amount;
-        bool success = governanceToken.transfer(_to, _amount);
+        tokenDeposited[_token][_from] -= _amount;
+        bool success = token.transfer(_to, _amount);
         require(success, "Token transfer failed");
     }
 
@@ -262,7 +271,7 @@ contract DAO is IDAO, ReentrancyGuard {
      */
     function removeDAOMembers(DAOMember[] memory members) public {
         require(isMultiSignDAO,DAOUnAuthorizedInteraction());
-        require(isProposal[msg.sender] || isDAOMember[msg.sender], DAOUnAuthorizedInteraction());
+        require(isProposal[msg.sender], DAOUnAuthorizedInteraction());
         for (uint32 i = 0; i < members.length; i++) {
             address memberAddress = members[i].memberAddress;
             if (isDAOMember[memberAddress]) {

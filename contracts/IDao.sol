@@ -51,9 +51,10 @@ interface IDAO {
     function withdrawFromDAOTreasury(address _from,address _to,uint256 amount)
         external;
 
-    function depositTokens(uint256 _amount) external;
+    function depositTokens(address _token,uint256 _amount) external;
 
     function withdrawTokens(
+        address _token,
         address _from,
         address _to,
         uint256 _amount
