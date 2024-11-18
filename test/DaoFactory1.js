@@ -633,8 +633,8 @@ describe("DaoFactory", function () {
             const endDate = new Date(endTimeInSeconds * 1000);
 
             console.log("Proposal End Date:", endDate.toLocaleString()); // Outputs in a readable format
-            console.log("Yes votes", await proposal.yesVotes());
-            console.log("No votes", await proposal.noVotes());
+            // console.log("Yes votes", await proposal.yesVotes());
+            // console.log("No votes", await proposal.noVotes());
 
             //voting 
 
@@ -700,8 +700,8 @@ describe("DaoFactory", function () {
             const endDate1 = new Date(endTimeInSeconds_ * 1000);
 
             console.log("Proposal End Date:", endDate1.toLocaleString()); // Outputs in a readable format
-            console.log("Yes votes", await proposalContract2.yesVotes());
-            console.log("No votes", await proposalContract2.noVotes());
+            // console.log("Yes votes", await proposalContract2.yesVotes());
+            // console.log("No votes", await proposalContract2.noVotes());
 
             //voting
 
@@ -741,7 +741,7 @@ describe("DaoFactory", function () {
             RemoveMembers = [
                 {
                     memberAddress: "0x90F79bf6EB2c4f870365E785982E1f101E93b906",  // Example member address
-                    deposit: "0" // Example deposit (1 Ether)
+                    deposit: "0" 
                 }
             ];
 
