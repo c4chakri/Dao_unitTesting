@@ -15,10 +15,10 @@ module.exports = {
     hardhat: {
       allowUnlimitedContractSize: true,
     },
-    sepolia: {
-      url: "https://sepolia.infura.io/v3/4cf6fddedfd54da5bde77099cbfc6c41",
-      accounts: ["pvtKey"]
-    }
+    // sepolia: {
+    //   url: "https://sepolia.infura.io/v3/4cf6fddedfd54da5bde77099cbfc6c41",
+    //   accounts: ["pvtKey"]
+    // }
   },
   etherscan: {
     apiKey: "NCK76P88P8MFMTQE66ZQ8XKVRAX6337NHC"

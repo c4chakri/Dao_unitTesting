@@ -1,31 +1,96 @@
 // SPDX-License-Identifier: MIT
+
+/**
+ * @dev This contract is a decentralized autonomous organization (DAO) allowing
+ *      members to create and vote on proposals. It is based on OpenZeppelin's
+ *      ERC20Votes contract and includes roles for minting, burning, pausing,
+ *      and changing the owner of the governance token.
+ */
 pragma solidity ^0.8.21;
 
 import {GovernanceToken, ReentrancyGuard, AccessControl} from "./GovernanceToken.sol";
 import {IDAO} from "./IDao.sol";
 import {DaoManagement} from "./DaoManagement.sol";
 
+
+/**
+ * @title DAO
+ * @dev A decentralized autonomous organization (DAO) is an
+ *      organization that is run by its members, typically in a
+ *      decentralized manner.
+ */
 contract DAO is IDAO, ReentrancyGuard {
+    /**
+     * @dev The governance token used for voting and staking within the DAO.
+     */
     GovernanceToken public immutable governanceToken;
 
+    /**
+     * @dev DAO settings including parameters like quorum and voting period.
+     */
     DaoSettings public _daoSettings;
+
+    /**
+     * @dev Settings related to proposal creation, such as required deposit.
+     */
     ProposalCreationSettings public _proposalCreationSettings;
+
+    /**
+     * @dev Governance settings including parameters like treasury limits.
+     */
     GovernanceSettings public governanceSettings;
 
+    /**
+     * @dev Address of the creator of the DAO.
+     */
     address public immutable DaoCreator;
 
+    /**
+     * @dev Indicates if the DAO is multi-signature enabled.
+     */
     bool public isMultiSignDAO;
 
+    /**
+     * @dev Counter for tracking proposal IDs.
+     */
     uint256 public proposalId;
+
+    /**
+     * @dev Counter for tracking the number of DAO members.
+     */
     uint256 public membersCount;
 
+    /**
+     * @dev Mapping of proposal ID to proposal information.
+     */
     mapping(uint256 => ProposalInfo) public proposals;
+
+    /**
+     * @dev Mapping to track blacklisted addresses.
+     */
     mapping(address => bool) public blacklisted;
+
+    /**
+     * @dev Mapping to check if an address is a DAO member.
+     */
     mapping(address => bool) public isDAOMember;
+
+    /**
+     * @dev Mapping to check if an address is a proposal contract.
+     */
     mapping(address => bool) public isProposal;
+
+    /**
+     * @dev Mapping of addresses to their treasury balance.
+     */
     mapping(address => uint256) public treasuryBalance;
+
+    /**
+     * @dev Mapping of addresses to the amount of tokens deposited.
+     */
     mapping(address => uint256) public tokenDeposited;
 
+    // Custom error messages for specific conditions in the DAO contract
     error DAOBlacklistedAddress();
     error DAONotADaoMember();
     error DAOInsufficientBalance();
@@ -35,6 +100,7 @@ contract DAO is IDAO, ReentrancyGuard {
     error DAOUnAuthorizedInteraction();
     error NotAFreshGovernanceToken();
 
+    // Modifiers
     modifier notBlacklisted(address account) {
         if (blacklisted[account]) revert DAOBlacklistedAddress();
         _;
@@ -53,6 +119,17 @@ contract DAO is IDAO, ReentrancyGuard {
         _;
     }
 
+    /**
+     * @dev Initializes the DAO with the provided parameters.
+     * @param daoManagementAddress The address of the DAO management contract.
+     * @param _daoParams Initial settings for the DAO.
+     * @param _governanceToken Address of an existing governance token or zero to create a new token.
+     * @param _GovernanceTokenParams Parameters for governance token creation.
+     * @param _governanceSettings Governance configuration settings.
+     * @param _daoMembers Initial members of the DAO.
+     * @param _proposalCreationParams Settings for creating proposals in the DAO.
+     * @param _isMultiSignDAO Flag indicating if the DAO requires multi-signature for actions.
+     */
     constructor(
         address daoManagementAddress,
         DaoSettings memory _daoParams,
@@ -71,23 +148,20 @@ contract DAO is IDAO, ReentrancyGuard {
                 : GovernanceToken(
                     daoManagement.createGovernanceToken(_GovernanceTokenParams)
                 ); // Create new token
-
-            // require(
-            //     governanceToken.isFreshGovernanceToken(),
-            //     NotAFreshGovernanceToken()
-            // );
             governanceToken.setDAOAddress(address(this));
         }
         governanceSettings = _governanceSettings;
-
         _daoSettings = _daoParams;
-
         _proposalCreationSettings = _proposalCreationParams;
         DaoCreator = _GovernanceTokenParams.councilAddress;
         isDAOMember[msg.sender] = true;
         addDAOMembers(_daoMembers);
     }
 
+    /**
+     * @dev Allows members to deposit funds to the DAO's treasury.
+     * @param _amount The amount to deposit.
+     */
     function depositToDAOTreasury(uint256 _amount)
         external
         payable
@@ -97,6 +171,12 @@ contract DAO is IDAO, ReentrancyGuard {
         treasuryBalance[msg.sender] += _amount;
     }
 
+    /**
+     * @dev Withdraws funds from the DAO treasury.
+     * @param _from The address from which funds are deducted.
+     * @param _to The recipient address.
+     * @param amount The amount to withdraw.
+     */
     function withdrawFromDAOTreasury(
         address _from,
         address _to,
@@ -108,6 +188,10 @@ contract DAO is IDAO, ReentrancyGuard {
         payable(_to).transfer(amount);
     }
 
+    /**
+     * @dev Deposits governance tokens into the DAO.
+     * @param _amount Amount of tokens to deposit.
+     */
     function depositTokens(uint256 _amount) external {
         require(
             governanceToken.balanceOf(msg.sender) >= _amount,
@@ -127,10 +211,15 @@ contract DAO is IDAO, ReentrancyGuard {
             _amount
         );
         require(success, "Token transfer failed");
-
         tokenDeposited[msg.sender] += _amount;
     }
 
+    /**
+     * @dev Withdraws governance tokens from the DAO.
+     * @param _from The address from which tokens are withdrawn.
+     * @param _to The recipient address.
+     * @param _amount The amount to withdraw.
+     */
     function withdrawTokens(
         address _from,
         address _to,
@@ -138,25 +227,25 @@ contract DAO is IDAO, ReentrancyGuard {
     ) external nonReentrant _isProposal(msg.sender) {
         uint256 balance = governanceToken.balanceOf(address(this));
         uint256 depBal = tokenDeposited[_from];
-
         require(depBal >= _amount, "Not enough deposited balance");
         require(balance >= _amount, "Not enough contract balance");
-
         tokenDeposited[_from] -= _amount;
         bool success = governanceToken.transfer(_to, _amount);
         require(success, "Token transfer failed");
     }
 
+    /**
+     * @dev Adds new members to the DAO.
+     * @param members Array of members to be added.
+     */
     function addDAOMembers(DAOMember[] memory members) public {
         require(
             isDAOMember[msg.sender] || isProposal[msg.sender],
             DAONotADaoMember()
         );
-
         for (uint32 i = 0; i < members.length; i++) {
             address memberAddress = members[i].memberAddress;
             uint256 deposit = members[i].deposit;
-
             if (!isDAOMember[memberAddress]) {
                 isDAOMember[memberAddress] = true;
                 ++membersCount;
@@ -167,13 +256,15 @@ contract DAO is IDAO, ReentrancyGuard {
         }
     }
 
+    /**
+     * @dev Removes members from the DAO.
+     * @param members Array of members to be removed.
+     */
     function removeDAOMembers(DAOMember[] memory members) public {
         require(isMultiSignDAO,DAOUnAuthorizedInteraction());
         require(isProposal[msg.sender] || isDAOMember[msg.sender], DAOUnAuthorizedInteraction());
-
         for (uint32 i = 0; i < members.length; i++) {
             address memberAddress = members[i].memberAddress;
-
             if (isDAOMember[memberAddress]) {
                 isDAOMember[memberAddress] = false;
                 --membersCount;
@@ -181,7 +272,14 @@ contract DAO is IDAO, ReentrancyGuard {
         }
     }
 
-    function configureProposal(
+    /**
+     * @dev Configures a proposal for the DAO.
+     * @param proposalAddress Address of the deployed proposal.
+     * @param _proposerAddress Address of the proposal creator.
+     * @param _title Title of the proposal.
+     * @param _actionId ID of the action proposed 1 for mint and 2 for burn.
+     */
+ function configureProposal(
         address proposalAddress,
         address _proposerAddress,
         string memory _title,
@@ -203,6 +301,7 @@ contract DAO is IDAO, ReentrancyGuard {
         proposalId++;
         isProposal[proposalAddress] = true;
     }
+
 
     function updateGovernanceSettings(GovernanceSettings memory _newSettings)
         external

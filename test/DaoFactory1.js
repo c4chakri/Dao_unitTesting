@@ -64,24 +64,24 @@ describe("DaoFactory", function () {
         const abiFragment = [
             "function removeDAOMembers((address memberAddress, uint256 deposit)[] members) external"
         ];
-    
+
         // Create the interface for the function
         const iface = new ethers.Interface(abiFragment);
-    
+
         // Encode the function call with the array of structs as a parameter
         const encodedData = iface.encodeFunctionData('removeDAOMembers', [members]);
-    
+
         // Create the Action tuple array
         const action = [
             daoAddr, // Address of the DAO contract
             0,       // Value in wei to send (usually 0 for function calls)
             encodedData // Encoded function data
         ];
-    
+
         // Return the action tuple array
         return JSON.stringify([action]);
     }
-    
+
 
 
     async function createUpdateProposalMemberSettingsAction(daoAddr, isTokenBasedProposal, minimumRequirement) {
@@ -112,7 +112,7 @@ describe("DaoFactory", function () {
         // Return the action tuple array wrapped in another array
         return JSON.stringify([[action]]); // Ensures the return type is [[action]]
     }
-    async function encodeWithdrawFromDAOTreasury(daoAddr,_from, _to, amount) {
+    async function encodeWithdrawFromDAOTreasury(daoAddr, _from, _to, amount) {
         // ABI of the DAO contract containing the `withdrawFromDAOTreasury` function
         const daoABI = [
             "function withdrawFromDAOTreasury(address _from,address _to,uint256 amount)"
@@ -159,13 +159,13 @@ describe("DaoFactory", function () {
         const daoFactory = await upgrades.deployProxy(DaoFactory, [daoManagement.target]);
         return { daoFactory };
     }
-async function deployActionExecutor() {
-    const ActionExecutor = await ethers.getContractFactory("ActionExecutor");
-    const actionExecutor = await ActionExecutor.deploy();
+    async function deployActionExecutor() {
+        const ActionExecutor = await ethers.getContractFactory("ActionExecutor");
+        const actionExecutor = await ActionExecutor.deploy();
 
-    return {actionExecutor}
+        return { actionExecutor }
 
-}
+    }
 
     describe("Deployment of DAO 1", function () {
 
@@ -213,7 +213,27 @@ async function deployActionExecutor() {
             // const decodedData = ethers.defaultAbiCoder.decode(decodeOption, rawAddress);
             const daoAddress = "0x" + rawAddress.slice(-40);
             const governanceAddress = "0x" + tokenAddress.slice(-40);
+            const daoCont = await ethers.getContractAt("DAO", daoAddress);
+            // const dName = await daoCont.name();
+            const dSettins = await daoCont._daoSettings();
+            const dProposal = await daoCont._proposalCreationSettings();
+            const dgovernanceSettings = await daoCont.governanceSettings();
 
+
+            console.log("Dao Details");
+            console.table({
+                "Dao Address": daoAddress,
+                "Governance Address": governanceAddress,
+
+                // "Dao Name": dName,
+                "Dao Settings": dSettins,
+                "Proposal Settings": dProposal,
+                "Governance Settings": dgovernanceSettings
+
+
+
+
+            })
 
 
             const _title = "Dao Settings Proposal(Name , description)";
@@ -233,7 +253,7 @@ async function deployActionExecutor() {
             console.log("Creating Proposal...................Dao name set title is : ", daoName);
 
 
-            const proposal1 = await daoManagement.createProposal(daoAddress, _title, _description, 2,_startTime, _duration, actionId, _actions);
+            const proposal1 = await daoManagement.createProposal(daoAddress, _title, _description, 2, _startTime, _duration, actionId, _actions);
             // console.log("proposal1: ", proposal1);
 
 
@@ -252,8 +272,7 @@ async function deployActionExecutor() {
             const endDate = new Date(endTimeInSeconds * 1000);
 
             console.log("Proposal End Date:", endDate.toLocaleString()); // Outputs in a readable format
-            console.log("Yes votes", await proposal.yesVotes());
-            console.log("No votes", await proposal.noVotes());
+
 
             //voting 
 
@@ -263,17 +282,18 @@ async function deployActionExecutor() {
             await proposal.connect(member2).vote(2);
             await proposal.connect(member3).vote(1);
 
-            console.log("Yes votes", await proposal.yesVotes());
-            console.log("No votes", await proposal.noVotes());
-
-
-            console.log("approved", await proposal.approved());
-            console.log("executed", await proposal.executed());
+            console.table({
+                "Yes Votes": await proposal.yesVotes(),
+                "No Votes": await proposal.noVotes(),
+                "Abstain Votes": await proposal.abstainVotes(),
+                "is Approved": await proposal.approved() ? "Approved" : "Not Approved",
+                "is Executed": await proposal.executed() ? "Executed" : "Not Executed"
+            })
 
             console.log("execution...............started");
 
             await proposal.connect(member1).executeProposal();
-            console.log("executed", await proposal.executed());
+            console.table({ "is Executed": await proposal.executed() ? "Executed" : "Not Executed" });
 
             console.log("Checking the result...............started");
 
@@ -305,7 +325,7 @@ async function deployActionExecutor() {
 
             pActions = [[daoAddress, 0, "0xb91835150000000000000000000000000000000000000000000000000000000000000020000000000000000000000000000000000000000000000000000000000000000100000000000000000000000090f79bf6eb2c4f870365e785982e1f101e93b9060000000000000000000000000000000000000000000000000000000000000064"]]
 
-            const proposal2 = await daoManagement.createProposal(daoAddress, pTitle, pDescription, 2,pStartTime, pDuration, pActionId, pActions);
+            const proposal2 = await daoManagement.createProposal(daoAddress, pTitle, pDescription, 2, pStartTime, pDuration, pActionId, pActions);
 
             const proposalReceipt2 = await proposal2.wait();
             const proposalAddress2 = proposalReceipt2.logs[0].args[0];
@@ -321,8 +341,8 @@ async function deployActionExecutor() {
             const endDate1 = new Date(endTimeInSeconds_ * 1000);
 
             console.log("Proposal End Date:", endDate.toLocaleString()); // Outputs in a readable format
-            console.log("Yes votes", await proposalContract2.yesVotes());
-            console.log("No votes", await proposalContract2.noVotes());
+
+
 
             //voting
 
@@ -332,17 +352,17 @@ async function deployActionExecutor() {
             await proposalContract2.connect(member2).vote(2);
             await proposalContract2.connect(member3).vote(1);
 
-            console.log("Yes votes", await proposalContract2.yesVotes());
-            console.log("No votes", await proposalContract2.noVotes());
-
-            console.log("approved", await proposalContract2.approved());
-            console.log("executed", await proposalContract2.executed());
-
+            console.table({
+                "Yes Votes": await proposalContract2.yesVotes(),
+                "No Votes": await proposalContract2.noVotes(),
+                "Abstain Votes": await proposalContract2.abstainVotes(),
+                "is Approved": await proposalContract2.approved() ? "Approved" : "Not Approved",
+                "is Executed": await proposalContract2.executed() ? "Executed" : "Not Executed"
+            })
             console.log("execution...............started");
 
             await proposalContract2.connect(member1).executeProposal();
-            console.log("executed", await proposalContract2.executed());
-
+            console.table({ "is Executed": await proposalContract2.executed() ? "Executed" : "Not Executed" });
 
 
             console.log("Creating Proposal...................Update proposal member settings ", member4.address);
@@ -358,7 +378,7 @@ async function deployActionExecutor() {
             let pActions1 = [[daoAddress, 0, "0x132da92d0000000000000000000000000000000000000000000000000000000000000001000000000000000000000000000000000000000000000000000000000000001b"]]
 
 
-            const proposal3 = await daoManagement.connect(member4).createProposal(daoAddress, pTitle1, pDescription1,2, pStartTime1, pDuration1, pActionId1, pActions1);
+            const proposal3 = await daoManagement.connect(member4).createProposal(daoAddress, pTitle1, pDescription1, 2, pStartTime1, pDuration1, pActionId1, pActions1);
 
             const proposalReceipt3 = await proposal3.wait();
             const proposalAddress3 = proposalReceipt3.logs[0].args[0];
@@ -374,12 +394,7 @@ async function deployActionExecutor() {
             // Convert to a JavaScript Date object (Unix timestamp in seconds -> milliseconds)
             const endDate2 = new Date(endTimeInSeconds1 * 1000);
 
-            console.log("Proposal End Date:", endDate.toLocaleString()); // Outputs in a readable format
-            console.log("Yes votes", await proposalContract3.yesVotes());
-            console.log("No votes", await proposalContract3.noVotes());
-
-            console.log("approved", await proposalContract3.approved());
-            console.log("executed", await proposalContract3.executed());
+           
             //voting
 
             console.log("voting...............started");
@@ -388,14 +403,16 @@ async function deployActionExecutor() {
             await proposalContract3.connect(member2).vote(2);
             await proposalContract3.connect(member3).vote(1);
             await proposalContract3.connect(member4).vote(2);
-
-            console.log("Yes votes", await proposalContract3.yesVotes());
-            console.log("No votes", await proposalContract3.noVotes());
-
-            console.log("approved", await proposalContract3.approved());
-
+            console.table({
+                "Yes Votes": await proposalContract3.yesVotes(),
+                "No Votes": await proposalContract3.noVotes(),
+                "is Approved": await proposalContract3.approved() ? "Approved" : "Not Approved",
+                "is Executed": await proposalContract3.executed() ? "Executed" : "Not Executed"
+            })
             await proposalContract3.connect(member4).executeProposal();
-            console.log("executed", await proposalContract3.executed());
+            console.log("execution...............started");
+
+            console.table({ "is Executed": await proposalContract3.executed() ? "Executed" : "Not Executed" });
 
 
             //Treasury Management 
@@ -444,7 +461,7 @@ async function deployActionExecutor() {
             const pActionId5 = 1;
             const pActions5 = [["0x75537828f2ce51be7289709686a69cbfdbb714f1", 0, "0x5e35359e000000000000000000000000f39fd6e51aad88f6f4ce6ab8827279cfffb9226600000000000000000000000070997970c51812dc3a010c7d01b50e0d17dc79c80000000000000000000000000000000000000000000000000000000000000001"]];
 
-            const proposal5 = await daoManagement.createProposal(daoAddress, pTitle5, pDescription5,2, pStartTime5, pDuration5, pActionId5, pActions5);
+            const proposal5 = await daoManagement.createProposal(daoAddress, pTitle5, pDescription5, 2, pStartTime5, pDuration5, pActionId5, pActions5);
 
             const proposalReceipt5 = await proposal5.wait();
             const proposalAddress5 = proposalReceipt5.logs[0].args[0];
@@ -458,17 +475,20 @@ async function deployActionExecutor() {
             await proposalContract5.connect(member3).vote(1);
             await proposalContract5.connect(member4).vote(2);
 
-            console.log("Yes votes", await proposalContract5.yesVotes());
-            console.log("No votes", await proposalContract5.noVotes());
-
-            console.log("approved", await proposalContract5.approved());
+            console.table({
+                "Yes Votes": await proposalContract5.yesVotes(),
+                "No Votes": await proposalContract5.noVotes(),
+                "is Approved": await proposalContract5.approved() ? "Approved" : "Not Approved",
+                "is Executed": await proposalContract5.executed() ? "Executed" : "Not Executed"
+            })
             // check balance before withdraw 
 
             const _member2Balance = await governanceTokenContract.balanceOf(member2.address);
             console.log('\n', "Member2 Balance: ", _member2Balance);
             await proposalContract5.connect(member4).executeProposal();
-            console.log("executed", await proposalContract5.executed());
-
+            console.table({
+                "is Executed": await proposalContract5.executed() ? "Executed" : "Not Executed"
+            })
             // check tokens after withdraw
 
             var memberFundBalance = await daoContract.treasuryBalance(member1.address);
@@ -486,9 +506,9 @@ async function deployActionExecutor() {
             const pStartTime6 = Math.floor(Date.now() / 1000); // 0 seconds since epoch
             const pDuration6 = 3600; // 1 hour duration
             const pActionId6 = 1;
-            const pActions6 =  [["0x75537828f2ce51be7289709686a69cbfdbb714f1",0,"0x5e45ad8b000000000000000000000000f39fd6e51aad88f6f4ce6ab8827279cfffb9226600000000000000000000000070997970c51812dc3a010c7d01b50e0d17dc79c80000000000000000000000000000000000000000000000000000000000000001"]];
+            const pActions6 = [["0x75537828f2ce51be7289709686a69cbfdbb714f1", 0, "0x5e45ad8b000000000000000000000000f39fd6e51aad88f6f4ce6ab8827279cfffb9226600000000000000000000000070997970c51812dc3a010c7d01b50e0d17dc79c80000000000000000000000000000000000000000000000000000000000000001"]];
 
-            const proposal6 = await daoManagement.createProposal(daoAddress, pTitle6, pDescription6, 2,pStartTime6, pDuration6, pActionId6, pActions6);
+            const proposal6 = await daoManagement.createProposal(daoAddress, pTitle6, pDescription6, 2, pStartTime6, pDuration6, pActionId6, pActions6);
 
             const proposalReceipt6 = await proposal6.wait();
             const proposalAddress6 = proposalReceipt6.logs[0].args[0];
@@ -502,21 +522,24 @@ async function deployActionExecutor() {
             await proposalContract6.connect(member3).vote(1);
             await proposalContract6.connect(member4).vote(2);
 
-            console.log("Yes votes", await proposalContract6.yesVotes());
-            console.log("No votes", await proposalContract6.noVotes());
-
-            console.log("approved", await proposalContract6.approved());
+            console.table({
+                "Yes Votes": await proposalContract6.yesVotes(),
+                "No Votes": await proposalContract6.noVotes(),
+                "is Approved": await proposalContract6.approved() ? "Approved" : "Not Approved",
+                "is Executed": await proposalContract6.executed() ? "Executed" : "Not Executed"
+            })
 
             await proposalContract6.connect(member4).executeProposal();
-            console.log("executed", await proposalContract6.executed());
-
+            console.table({
+                "is Executed": await proposalContract6.executed() ? "Executed" : "Not Executed"
+            })
             // check the funds balance after withdraw
 
             memberFundBalance = await daoContract.treasuryBalance(member1.address);
             console.log('\n', "Member1 Balance after withdraw: ", memberFundBalance);
 
 
-           
+
         });
 
         it("Should create a multisig new dao flows", async function () {
@@ -543,11 +566,11 @@ async function deployActionExecutor() {
                 proposalParams,
                 isMultiSignDAO
             );
-            
-            
+
+
             const receipt = await dao.wait();
             // console.log("receipt: ", receipt.logs);
-            
+
 
 
             const daoManagementAddress = await daoFactory.daoManagement();
@@ -564,14 +587,14 @@ async function deployActionExecutor() {
             const governanceAddress = "0x" + tokenAddress.slice(-40);
 
             console.log("daoAddress: ", daoAddress);
-            
+
 
             // load dao
-            const daoC = await ethers.getContractAt("DAO",daoAddress)
+            const daoC = await ethers.getContractAt("DAO", daoAddress)
             const _govSettings = await daoC.governanceSettings();
             const _DaoSettings = await daoC._daoSettings()
-            console.log("Gov",_govSettings,_DaoSettings);
-            
+            // console.log("Gov",_govSettings,_DaoSettings);
+
             const _title = "Dao Settings Proposal(Name , description)";
             const _description = "Proposal Description";
             const _startTime = Math.floor(Date.now() / 1000); // current time as UNIX timestamp
@@ -589,7 +612,7 @@ async function deployActionExecutor() {
             console.log("Creating Proposal...................Dao name set title is : ", daoName);
 
 
-            const proposal1 = await daoManagement.createProposal(daoAddress, _title, _description,2, _startTime, _duration, actionId, _actions);
+            const proposal1 = await daoManagement.createProposal(daoAddress, _title, _description, 2, _startTime, _duration, actionId, _actions);
             // console.log("proposal1: ", proposal1);
 
 
@@ -619,18 +642,19 @@ async function deployActionExecutor() {
             await proposal.connect(member2).vote(2);
             await proposal.connect(member3).vote(1);
 
-            console.log("Yes votes", await proposal.yesVotes());
-            console.log("No votes", await proposal.noVotes());
-
-
-            console.log("approved", await proposal.approved());
-            console.log("executed", await proposal.executed());
+            console.table({
+                "Yes votes": await proposal.yesVotes(),
+                "No votes": await proposal.noVotes(),
+                "Approved": await proposal.approved(),
+                "Executed": await proposal.executed()
+            })
 
             console.log("execution...............started");
 
             await proposal.connect(member1).executeProposal();
-            console.log("executed", await proposal.executed());
-
+            console.table({
+                "Executed": await proposal.executed()
+            })
             console.log("Checking the result...............started");
 
             const daoContract = await ethers.getContractAt("DAO", daoAddress);
@@ -661,7 +685,7 @@ async function deployActionExecutor() {
 
             pActions = [[daoAddress, 0, "0xb91835150000000000000000000000000000000000000000000000000000000000000020000000000000000000000000000000000000000000000000000000000000000100000000000000000000000090f79bf6eb2c4f870365e785982e1f101e93b9060000000000000000000000000000000000000000000000000000000000000064"]]
 
-            const proposal2 = await daoManagement.createProposal(daoAddress, pTitle, pDescription, 2,pStartTime, pDuration, pActionId, pActions);
+            const proposal2 = await daoManagement.createProposal(daoAddress, pTitle, pDescription, 2, pStartTime, pDuration, pActionId, pActions);
 
             const proposalReceipt2 = await proposal2.wait();
             const proposalAddress2 = proposalReceipt2.logs[0].args[0];
@@ -688,32 +712,34 @@ async function deployActionExecutor() {
             await proposalContract2.connect(member2).vote(2);
             await proposalContract2.connect(member3).vote(1);
 
-            console.log("Yes votes", await proposalContract2.yesVotes());
-            console.log("No votes", await proposalContract2.noVotes());
-
-            console.log("approved", await proposalContract2.approved());
-            console.log("executed", await proposalContract2.executed());
+            console.table({
+                "Yes votes": await proposalContract2.yesVotes(),
+                "No votes": await proposalContract2.noVotes(),
+                "Approved": await proposalContract2.approved(),
+                "Executed": await proposalContract2.executed()
+            })
 
             console.log("execution...............started");
-           console.log("Early Execution : ",await proposalContract2.earlyExecution());
-            
+            console.log("Early Execution : ", await proposalContract2.earlyExecution());
+
             await proposalContract2.connect(member1).executeProposal();
-            console.log("executed", await proposalContract2.executed());
+            console.table({
+                "Executed": await proposalContract2.executed()
+            })
+
+            console.log("is daoMember ", member4.address, await daoC.isDAOMember(member4.address));
 
 
-            console.log("is daoMember ",member4.address, await daoC.isDAOMember(member4.address));
-            
-
-// Remove dao members
+            // Remove dao members
 
             console.log("Creating Proposal...................Removing memember in dao ", member4.address);
-             pRemoveTitle = "Remove member proposal";
-            let  pRemoveDescription1 = "Remove member proposal description";
-             pRemoveStartTime1 = Math.floor(Date.now() / 1000); // current time as UNIX timestamp
-             pRemoveDuration1 = 3600; // 1 hour duration
-             pRemoveActionId1 = 2;
-             pRemoveActions1 = [];
-             RemoveMembers = [
+            pRemoveTitle = "Remove member proposal";
+            let pRemoveDescription1 = "Remove member proposal description";
+            pRemoveStartTime1 = Math.floor(Date.now() / 1000); // current time as UNIX timestamp
+            pRemoveDuration1 = 3600; // 1 hour duration
+            pRemoveActionId1 = 2;
+            pRemoveActions1 = [];
+            RemoveMembers = [
                 {
                     memberAddress: "0x90F79bf6EB2c4f870365E785982E1f101E93b906",  // Example member address
                     deposit: "0" // Example deposit (1 Ether)
@@ -723,47 +749,48 @@ async function deployActionExecutor() {
             await createRemoveDAOMembersAction(daoAddress, RemoveMembers).then((action) => {
                 pRemoveActions1 = action
             });
-            console.log("pActions of remove members: ", pRemoveActions1);
+            // console.log("pActions of remove members: ", pRemoveActions1);
 
-            pRemoveActions1 =[[daoAddress,0,"0xbf3adaec0000000000000000000000000000000000000000000000000000000000000020000000000000000000000000000000000000000000000000000000000000000100000000000000000000000090f79bf6eb2c4f870365e785982e1f101e93b9060000000000000000000000000000000000000000000000000000000000000000"]]
+            pRemoveActions1 = [[daoAddress, 0, "0xbf3adaec0000000000000000000000000000000000000000000000000000000000000020000000000000000000000000000000000000000000000000000000000000000100000000000000000000000090f79bf6eb2c4f870365e785982e1f101e93b9060000000000000000000000000000000000000000000000000000000000000000"]]
 
-             RemoveProposal3 = await daoManagement.createProposal(daoAddress, pRemoveTitle, pRemoveDescription1, 2,pRemoveStartTime1, pRemoveDuration1, pRemoveActionId1, pRemoveActions1);
+            RemoveProposal3 = await daoManagement.createProposal(daoAddress, pRemoveTitle, pRemoveDescription1, 2, pRemoveStartTime1, pRemoveDuration1, pRemoveActionId1, pRemoveActions1);
 
-            let  proposalRemoveReceipt3 = await RemoveProposal3.wait();
-            let  proposalRemoveAddress3 = proposalRemoveReceipt3.logs[0].args[0];
-             console.log("proposalAddress3: ", proposalRemoveAddress3);
+            let proposalRemoveReceipt3 = await RemoveProposal3.wait();
+            let proposalRemoveAddress3 = proposalRemoveReceipt3.logs[0].args[0];
+            console.log("proposalAddress3: ", proposalRemoveAddress3);
 
-             // load proposal contract
+            // load proposal contract
 
             let proposalRemoveContract3 = await ethers.getContractAt("Proposal", proposalRemoveAddress3);
-             console.log("Proposal Title : ", await proposalRemoveContract3.proposalTitle());
-             const endTimeInSeconds_1 = Number(await proposalRemoveContract3.endTime()); // Convert BigInt to regular number
+            console.log("Proposal Title : ", await proposalRemoveContract3.proposalTitle());
+            const endTimeInSeconds_1 = Number(await proposalRemoveContract3.endTime()); // Convert BigInt to regular number
 
-             // Convert to a JavaScript Date object (Unix timestamp in seconds -> milliseconds)
-              endDate2_ = new Date(endTimeInSeconds_1 * 1000);
+            // Convert to a JavaScript Date object (Unix timestamp in seconds -> milliseconds)
+            endDate2_ = new Date(endTimeInSeconds_1 * 1000);
 
-             console.log("Proposal End Date:", endDate2_.toLocaleString()); // Outputs in a readable format
-             console.log("Yes votes", await proposalRemoveContract3.yesVotes());
-             console.log("No votes", await proposalRemoveContract3.noVotes());    
+            console.log("Proposal End Date:", endDate2_.toLocaleString()); // Outputs in a readable format
+           
 
-             console.log("voting...............started");
+            console.log("voting...............started");
 
-             await proposalRemoveContract3.connect(member1).vote(1);
-             await proposalRemoveContract3.connect(member2).vote(1);
+            await proposalRemoveContract3.connect(member1).vote(1);
+            await proposalRemoveContract3.connect(member2).vote(1);
 
-             console.log("Yes votes", await proposalRemoveContract3.yesVotes());
-             console.log("No votes", await proposalRemoveContract3.noVotes());
+            console.table({
+                "Yes votes": await proposalRemoveContract3.yesVotes(),
+                "No votes": await proposalRemoveContract3.noVotes(),
+                "Approved": await proposalRemoveContract3.approved(),
+                "Executed": await proposalRemoveContract3.executed()
+            })
 
-             console.log("approved", await proposalRemoveContract3.approved());
-             console.log("executed", await proposalRemoveContract3.executed());
+            console.log("execution...............started");
+            console.log("Early Execution : ", await proposalRemoveContract3.earlyExecution());
 
-             console.log("execution...............started");
-             console.log("Early Execution : ",await proposalRemoveContract3.earlyExecution());
-            
-             await proposalRemoveContract3.connect(member1).executeProposal();
-             console.log("executed", await proposalRemoveContract3.executed());
-
-             console.log("is daoMember ",member4.address, await daoC.isDAOMember(member4.address));
+            await proposalRemoveContract3.connect(member1).executeProposal();
+            console.table({
+                "Executed": await proposalRemoveContract3.executed()
+            })
+            console.log("is daoMember ", member4.address, await daoC.isDAOMember(member4.address));
 
 
             console.log("Creating Proposal...................Update proposal member settings ", member4.address);
@@ -779,7 +806,7 @@ async function deployActionExecutor() {
             const pActions1 = [[daoAddress, 0, "0x132da92d0000000000000000000000000000000000000000000000000000000000000001000000000000000000000000000000000000000000000000000000000000001b"]]
 
 
-            const proposal3 = await daoManagement.connect(member3).createProposal(daoAddress, pTitle1, pDescription1, 2,pStartTime1, pDuration1, pActionId1, pActions1);
+            const proposal3 = await daoManagement.connect(member3).createProposal(daoAddress, pTitle1, pDescription1, 2, pStartTime1, pDuration1, pActionId1, pActions1);
 
             const proposalReceipt3 = await proposal3.wait();
             const proposalAddress3 = proposalReceipt3.logs[0].args[0];
@@ -796,11 +823,7 @@ async function deployActionExecutor() {
             const endDate2 = new Date(endTimeInSeconds1 * 1000);
 
             console.log("Proposal End Date:", endDate2.toLocaleString()); // Outputs in a readable format
-            console.log("Yes votes", await proposalContract3.yesVotes());
-            console.log("No votes", await proposalContract3.noVotes());
-
-            console.log("approved", await proposalContract3.approved());
-            console.log("executed", await proposalContract3.executed());
+           
             //voting
 
             console.log("voting...............started");
@@ -809,20 +832,24 @@ async function deployActionExecutor() {
             await proposalContract3.connect(member2).vote(2);
             await proposalContract3.connect(member3).vote(1);
 
-            console.log("Yes votes", await proposalContract3.yesVotes());
-            console.log("No votes", await proposalContract3.noVotes());
-
-            console.log("approved", await proposalContract3.approved());
+            console.table({
+                "Yes votes": await proposalContract3.yesVotes(),
+                "No votes": await proposalContract3.noVotes(),
+                "Approved": await proposalContract3.approved(),
+                "Executed": await proposalContract3.executed()
+            })
+            console.log("Execution started :");
 
             await proposalContract3.connect(member2).executeProposal();
-            console.log("executed", await proposalContract3.executed());
-            console.log("result : ",);
-            
+
+            console.table({
+                "Executed": await proposalContract3.executed()
+            })
 
             //Treasury Management 
             console.log('\n', "Treasury Management.....................", '\n');
 
-          
+
 
             const depositAmount = ethers.parseEther("1");
 
@@ -840,10 +867,10 @@ async function deployActionExecutor() {
             expect(treasuryBalance).to.equal(depositAmount);
 
 
-          
-           
-            
-        
+
+
+
+
             // console.log('\n', "withdraw funds proposals...............", '\n');
 
             // const withdrawFundsAction = await encodeWithdrawFromDAOTreasury(daoAddress, member1.address, member2.address, 1);
@@ -885,15 +912,10 @@ async function deployActionExecutor() {
             // console.log('\n', "Member1 Balance after withdraw: ", memberFundBalance);
 
 
-           
+
         });
 
     });
 
-    describe("Actions Executor: ",function(){
-        it("Should execute actions", async function(){
 
-
-        }
-        )})
 })
