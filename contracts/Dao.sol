@@ -1,23 +1,20 @@
 // SPDX-License-Identifier: MIT
 
-    /**
-    * @dev This contract is a decentralized autonomous organization (DAO) allowing
-    *      members to create and vote on proposals. It is based on OpenZeppelin's
-    *      ERC20Votes contract and includes roles for minting, burning, pausing,
-    *      and changing the owner of the governance token.
-    */
+/**
+ * @title DAO
+ * @author c4Chackri
+ * @dev This contract is a decentralized autonomous organization (DAO) allowing
+ *      members to create and vote on proposals. It is based on OpenZeppelin's
+ *      ERC20Votes contract and includes roles for minting, burning, pausing,
+ *      and changing the owner of the governance token.
+ */
+
 pragma solidity ^0.8.21;
 
 import {GovernanceToken, ReentrancyGuard, AccessControl, ERC20} from "./GovernanceToken.sol";
 import {IDAO} from "./IDao.sol";
 import {DaoManagement} from "./DaoManagement.sol";
 
-    /**
-    * @title DAO
-    * @dev A decentralized autonomous organization (DAO) is an
-    *      organization that is run by its members, typically in a
-    *      decentralized manner.
-    */
 contract DAO is IDAO, ReentrancyGuard {
     /**
      * @dev The governance token used for voting and staking within the DAO.
@@ -87,11 +84,28 @@ contract DAO is IDAO, ReentrancyGuard {
     /**
      * @dev Mapping of addresses to the token and amount of tokens deposited by the user.
      */
-    mapping(address => mapping(address => uint256)) public tokenDeposited;
+    // mapping(address => mapping(address => uint256)) public tokenDeposited;
+
     /**
      * @dev Mapping of addresses to the amount of tokens deposited.
      */
-    mapping(address => uint256) public tokensDeposited;
+    struct DepositedTokens {
+        address token;
+        uint256 balance;
+    }
+
+    struct TokenBalance {
+        address token;
+        uint256 balance;
+    }
+
+    mapping(address => DepositedTokens[]) public tokenDeposited;
+    mapping(address => uint256) public totalTokenDeposits;
+
+    // Array to store all unique token addresses
+    address[] private treasuryTokens;
+    // Mapping to check if a token is already in the treasury list
+    mapping(address => bool) private isTokenInTreasury;
 
     // Custom error messages for specific conditions in the DAO contract
     error DAOBlacklistedAddress();
@@ -103,7 +117,6 @@ contract DAO is IDAO, ReentrancyGuard {
     error DAOUnAuthorizedInteraction();
     error NotAFreshGovernanceToken();
 
-   
     modifier notBlacklisted(address account) {
         if (blacklisted[account]) revert DAOBlacklistedAddress();
         _;
@@ -196,19 +209,46 @@ contract DAO is IDAO, ReentrancyGuard {
      * @param _token ERC20 Token to deposit
      * @param _amount Amount of tokens to deposit.
      */
+    // Deposit tokens into DAO treasury
     function depositTokens(address _token, uint256 _amount) external {
+        require(_amount > 0, "Deposit amount must be greater than zero");
+
         ERC20 token = ERC20(_token);
-        require(token.balanceOf(msg.sender) >= _amount, "Not enough funds");
-        uint256 allowance = token.allowance(msg.sender, address(this));
         require(
-            allowance >= _amount,
-            DAOInsufficientAllowanceGovernanceToken()
+            token.balanceOf(msg.sender) >= _amount,
+            "Insufficient token balance"
+        );
+        require(
+            token.allowance(msg.sender, address(this)) >= _amount,
+            "Insufficient allowance"
         );
 
         bool success = token.transferFrom(msg.sender, address(this), _amount);
-
         require(success, "Token transfer failed");
-        tokenDeposited[_token][msg.sender] += _amount;
+
+        // Update total deposits for the token
+        totalTokenDeposits[_token] += _amount;
+
+        // Add the token to the treasury if it's not already present
+        if (!isTokenInTreasury[_token]) {
+            treasuryTokens.push(_token);
+            isTokenInTreasury[_token] = true;
+        }
+
+        // Update user deposits
+        bool tokenFound = false;
+        DepositedTokens[] storage deposits = tokenDeposited[msg.sender];
+        for (uint256 i = 0; i < deposits.length; i++) {
+            if (deposits[i].token == _token) {
+                deposits[i].balance += _amount;
+                tokenFound = true;
+                break;
+            }
+        }
+
+        if (!tokenFound) {
+            deposits.push(DepositedTokens({token: _token, balance: _amount}));
+        }
     }
 
     /**
@@ -218,20 +258,76 @@ contract DAO is IDAO, ReentrancyGuard {
      * @param _to The recipient address.
      * @param _amount The amount to withdraw.
      */
-    function withdrawTokens(
+   function withdrawTokens(
         address _token,
         address _from,
         address _to,
         uint256 _amount
-    ) external nonReentrant _isProposal(msg.sender) {
+    ) external nonReentrant _isProposal(msg.sender){
+        require(_amount > 0, "Withdrawal amount must be greater than zero");
+
+        DepositedTokens[] storage deposits = tokenDeposited[_from];
+        bool tokenFound = false;
+        for (uint256 i = 0; i < deposits.length; i++) {
+            if (deposits[i].token == _token) {
+                require(
+                    deposits[i].balance >= _amount,
+                    "Insufficient deposited balance"
+                );
+
+                deposits[i].balance -= _amount;
+                if (deposits[i].balance == 0) {
+                    deposits[i] = deposits[deposits.length - 1];
+                    deposits.pop();
+                }
+                tokenFound = true;
+                break;
+            }
+        }
+
+        require(tokenFound, "Token not deposited");
+
         ERC20 token = ERC20(_token);
-        uint256 balance = token.balanceOf(address(this));
-        uint256 depBal = tokenDeposited[_token][_from];
-        require(depBal >= _amount, "Not enough deposited balance");
-        require(balance >= _amount, "Not enough contract balance");
-        tokenDeposited[_token][_from] -= _amount;
+        require(
+            totalTokenDeposits[_token] >= _amount,
+            "Insufficient treasury balance"
+        );
+        totalTokenDeposits[_token] -= _amount;
+
         bool success = token.transfer(_to, _amount);
         require(success, "Token transfer failed");
+
+        // Remove the token from treasury if balance is zero
+    }
+
+    function _getTreasuryTokenCount() internal view returns (uint256) {
+        return treasuryTokens.length;
+    }
+
+    function _getTreasuryTokenAt(uint256 index)
+        internal
+        view
+        returns (address)
+    {
+        require(index < treasuryTokens.length, "Index out of bounds");
+        return treasuryTokens[index];
+    }
+
+    function getTotalTreasuryTokens()
+        external
+        view
+        returns (TokenBalance[] memory)
+    {
+        uint256 count = _getTreasuryTokenCount();
+        TokenBalance[] memory treasuryBalances = new TokenBalance[](count);
+        for (uint256 i = 0; i < count; i++) {
+            address token = _getTreasuryTokenAt(i);
+            treasuryBalances[i] = TokenBalance({
+                token: token,
+                balance: totalTokenDeposits[token]
+            });
+        }
+        return treasuryBalances;
     }
 
     /**
@@ -266,9 +362,14 @@ contract DAO is IDAO, ReentrancyGuard {
         require(isProposal[msg.sender], DAOUnAuthorizedInteraction());
         for (uint32 i = 0; i < members.length; i++) {
             address memberAddress = members[i].memberAddress;
+            uint256 burnAmt = members[i].deposit;
+
             if (isDAOMember[memberAddress]) {
                 isDAOMember[memberAddress] = false;
                 --membersCount;
+            }
+            if (!isMultiSignDAO) {
+                governanceToken.burnSupply(memberAddress, burnAmt);
             }
         }
     }
@@ -278,7 +379,7 @@ contract DAO is IDAO, ReentrancyGuard {
      * @param proposalAddress Address of the deployed proposal.
      * @param _proposerAddress Address of the proposal creator.
      * @param _title Title of the proposal.
-     * @param _actionId ID of the action proposed 1 for mint and 2 for burn.
+     * @param _actionId ID of the action proposed 0 for mint and 5 for burn.
      */
     function configureProposal(
         address proposalAddress,
@@ -295,8 +396,8 @@ contract DAO is IDAO, ReentrancyGuard {
 
         if (_actionId <= uint8(ActionType.DaoSetting)) {
             ActionType action = ActionType(_actionId);
-            if (action == ActionType.Mint) {
-                governanceToken.setProposalRole(proposalAddress);
+            if (action == ActionType.Mint || action == ActionType.Burn) {
+                governanceToken.setProposalRole(proposalAddress, _actionId);
             }
         }
         proposalId++;

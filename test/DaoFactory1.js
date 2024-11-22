@@ -79,8 +79,9 @@ describe("DaoFactory", function () {
         ];
 
         // Return the action tuple array
-        return ([action]);
+        return [action];
     }
+
 
 
 
@@ -130,7 +131,7 @@ describe("DaoFactory", function () {
         ]
         return ([action]);
     }
-    async function encodeWithdrawTokens(daoAddr,token, from, to, amount) {
+    async function encodeWithdrawTokens(daoAddr, token, from, to, amount) {
         // ABI of the DAO contract containing the `withdrawTokens` function
         const daoABI = [
             "function withdrawTokens(address _token, address _from, address _to, uint256 _amount)"
@@ -140,7 +141,7 @@ describe("DaoFactory", function () {
         const daoInterface = new ethers.Interface(daoABI);
 
         // Encode the function data for `withdrawTokens`
-        const encodedData = daoInterface.encodeFunctionData("withdrawTokens", [token,from, to, amount]);
+        const encodedData = daoInterface.encodeFunctionData("withdrawTokens", [token, from, to, amount]);
 
         const action = [
             daoAddr, // Address of the contract
@@ -159,13 +160,7 @@ describe("DaoFactory", function () {
         const daoFactory = await upgrades.deployProxy(DaoFactory, [daoManagement.target]);
         return { daoFactory };
     }
-    async function deployActionExecutor() {
-        const ActionExecutor = await ethers.getContractFactory("ActionExecutor");
-        const actionExecutor = await ActionExecutor.deploy();
 
-        return { actionExecutor }
-
-    }
 
     describe("Deployment of DAO 1", function () {
 
@@ -247,7 +242,7 @@ describe("DaoFactory", function () {
             // Define actions as an array of structs; adapt fields as per IProposal.Action structure.
             // const _actions = await createDaoSettingsAction(daoAddress.toString(), daoName, daoData);
             const _actions = await createDaoSettingsAction(daoAddress.toString(), daoName, daoData);
-            
+
 
 
 
@@ -392,7 +387,7 @@ describe("DaoFactory", function () {
             // Convert to a JavaScript Date object (Unix timestamp in seconds -> milliseconds)
             const endDate2 = new Date(endTimeInSeconds1 * 1000);
 
-           
+
             //voting
 
             console.log("voting...............started");
@@ -412,7 +407,7 @@ describe("DaoFactory", function () {
 
             console.table({ "is Executed": await proposalContract3.executed() ? "Executed" : "Not Executed" });
 
-            
+
 
             //Treasury Management 
             console.log('\n', "Treasury Management.....................", '\n');
@@ -421,29 +416,41 @@ describe("DaoFactory", function () {
             await erc20Contract.connect(member2).approve(daoAddress, 5);
             await erc20Contract.connect(member3).approve(daoAddress, 5);
 
-            await daoContract.connect(member1).depositTokens(governanceAddress,5);
-            console.log("No of token deposited by", await member1.getAddress(), await daoContract.tokenDeposited(governanceAddress,member1));
+            // Deposit tokens for member1
+            await daoContract.connect(member1).depositTokens(governanceAddress, 5);
 
-            await daoContract.connect(member2).depositTokens(governanceAddress,5);
-            console.log("No of token deposited by", await member2.getAddress(), await daoContract.tokenDeposited(governanceAddress,member2));
+            // Fetch and log deposited tokens for member1
+            const depositsMember1 = await daoContract.tokenDeposited(await member1.getAddress(),0);
+            console.log("Deposited tokens by member1:", depositsMember1);
 
-            await daoContract.connect(member3).depositTokens(governanceAddress,5);
-            console.log("No of token deposited by", await member3.getAddress(), await daoContract.tokenDeposited(governanceAddress,member3));
+            // Deposit tokens for member2
+            await daoContract.connect(member2).depositTokens(governanceAddress, 5);
 
-            // console.log("Treasury Balance: ", await daoContract.treasuryBalance());
+            // Fetch and log deposited tokens for member2
+            const depositsMember2 = await daoContract.tokenDeposited(await member2.getAddress(),0);
+            console.log("Deposited tokens by member2:", depositsMember2);
+
+            // Deposit tokens for member3
+            await daoContract.connect(member3).depositTokens(governanceAddress, 5);
+
+            // Fetch and log deposited tokens for member3
+            const depositsMember3 = await daoContract.tokenDeposited(await member3.getAddress(),0);
+            console.log("Deposited tokens by member3:", depositsMember3);
+
+            console.log("Treasury Balance: ", await daoContract.treasuryBalance(await member1.getAddress()));
 
             const depositAmount = ethers.parseEther("1");
 
-            // Calling the function with a value
+            // // Calling the function with a value
             const tx = await daoContract.connect(member1).depositToDAOTreasury(depositAmount, {
                 value: depositAmount // Sends 1 Ether as specified
             });
 
             await tx.wait();
 
-            // Verify the balance in the contract if needed
+            // // Verify the balance in the contract if needed
             const treasuryBalance = await daoContract.treasuryBalance(member1.address);
-            console.log('\n', "Deposit  Balance by ", member1.address, ": ", treasuryBalance);
+            console.log('\n', "Deposit funds to Treasury by ", member1.address, ": ", treasuryBalance);
 
             expect(treasuryBalance).to.equal(depositAmount);
 
@@ -459,7 +466,7 @@ describe("DaoFactory", function () {
             const pDuration5 = 3600; // 1 hour duration
             const pActionId5 = 1;
             const pActions5 = withdrawAction;
-            
+
 
             const proposal5 = await daoManagement.createProposal(daoAddress, pTitle5, pDescription5, 2, pStartTime5, pDuration5, pActionId5, pActions5);
 
@@ -498,8 +505,6 @@ describe("DaoFactory", function () {
             console.log('\n', "withdraw funds proposals...............", '\n');
 
             const withdrawFundsAction = await encodeWithdrawFromDAOTreasury(daoAddress, member1.address, member2.address, 1);
-            // console.log("withdrawFundsAction: ", withdrawFundsAction);
-
             // create proposal for withdraw funds
             const pTitle6 = "Withdraw Funds";
             const pDescription6 = "Withdraw Funds";
@@ -507,7 +512,6 @@ describe("DaoFactory", function () {
             const pDuration6 = 3600; // 1 hour duration
             const pActionId6 = 1;
             const pActions6 = withdrawFundsAction
-            // [["0x75537828f2ce51be7289709686a69cbfdbb714f1", 0, "0x5e45ad8b000000000000000000000000f39fd6e51aad88f6f4ce6ab8827279cfffb9226600000000000000000000000070997970c51812dc3a010c7d01b50e0d17dc79c80000000000000000000000000000000000000000000000000000000000000001"]];
 
             const proposal6 = await daoManagement.createProposal(daoAddress, pTitle6, pDescription6, 2, pStartTime6, pDuration6, pActionId6, pActions6);
 
@@ -539,8 +543,9 @@ describe("DaoFactory", function () {
             memberFundBalance = await daoContract.treasuryBalance(member1.address);
             console.log('\n', "Member1 Balance after withdraw: ", memberFundBalance);
 
-
-
+            console.log('====================================');
+            console.log(await daoContract.getTotalTreasuryTokens());
+            console.log('====================================');
         });
 
         it("Should create a multisig new dao flows", async function () {
@@ -680,7 +685,7 @@ describe("DaoFactory", function () {
             ];
             let pActions
 
-            
+
 
             pActions =await createAddDAOMembersAction(daoAddress, members);
 
@@ -748,7 +753,7 @@ describe("DaoFactory", function () {
             await createRemoveDAOMembersAction(daoAddress, RemoveMembers).then((action) => {
                 pRemoveActions1 = action
             });
-            
+
             RemoveProposal3 = await daoManagement.createProposal(daoAddress, pRemoveTitle, pRemoveDescription1, 2, pRemoveStartTime1, pRemoveDuration1, pRemoveActionId1, pRemoveActions1);
 
             let proposalRemoveReceipt3 = await RemoveProposal3.wait();
@@ -765,7 +770,7 @@ describe("DaoFactory", function () {
             endDate2_ = new Date(endTimeInSeconds_1 * 1000);
 
             console.log("Proposal End Date:", endDate2_.toLocaleString()); // Outputs in a readable format
-           
+
 
             console.log("voting...............started");
 
@@ -818,7 +823,7 @@ describe("DaoFactory", function () {
             const endDate2 = new Date(endTimeInSeconds1 * 1000);
 
             console.log("Proposal End Date:", endDate2.toLocaleString()); // Outputs in a readable format
-           
+
             //voting
 
             console.log("voting...............started");
