@@ -131,24 +131,24 @@ describe("DaoFactory", function () {
         ]
         return ([action]);
     }
-    async function encodeWithdrawTokens(daoAddr, token, from, to, amount) {
+    async function encodeWithdrawTokens(daoAddr, token, to, amount) {
         // ABI of the DAO contract containing the `withdrawTokens` function
         const daoABI = [
-            "function withdrawTokens(address _token, address _from, address _to, uint256 _amount)"
+            "function withdrawTokens(address _token, address _to, uint256 _amount)"
         ];
-
+    
         // Create an interface from the ABI
         const daoInterface = new ethers.Interface(daoABI);
-
+    
         // Encode the function data for `withdrawTokens`
-        const encodedData = daoInterface.encodeFunctionData("withdrawTokens", [token, from, to, amount]);
-
+        const encodedData = daoInterface.encodeFunctionData("withdrawTokens", [token, to, amount]);
+    
         const action = [
             daoAddr, // Address of the contract
             0, // Value in wei to send (usually 0 for function calls)
             encodedData // Encoded function data
         ]
-
+    
         return ([action]);
     }
 
@@ -457,7 +457,7 @@ describe("DaoFactory", function () {
 
             console.log('\n', "withdraw token proposals...............", '\n');
 
-            const withdrawAction = await encodeWithdrawTokens(daoAddress,await daoContract.governanceToken(),  member1.address, member2.address, 1);
+            const withdrawAction = await encodeWithdrawTokens(daoAddress,await daoContract.governanceToken(), member2.address, 1);
 
             // create proposal for withdraw tokens
             const pTitle5 = "Withdraw Tokens";
@@ -501,7 +501,9 @@ describe("DaoFactory", function () {
             var memberFundBalance = await daoContract.treasuryBalance(member1.address);
             console.log('\n', "Member1 Balance before withdraw: ", memberFundBalance);
 
-
+            const _member2BalanceAfterWithdraw = await governanceTokenContract.balanceOf(member2.address);
+            console.log('\n', "Member2 Balance after withdraw: ", _member2BalanceAfterWithdraw);
+            
             console.log('\n', "withdraw funds proposals...............", '\n');
 
             const withdrawFundsAction = await encodeWithdrawFromDAOTreasury(daoAddress, member1.address, member2.address, 1);

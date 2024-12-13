@@ -254,38 +254,38 @@ contract DAO is IDAO, ReentrancyGuard {
     /**
      * @dev Withdraws governance tokens from the DAO.
      * @param _token The address ERC20 Token which are deposited in DAO
-     * @param _from The address from which tokens are withdrawn.
      * @param _to The recipient address.
      * @param _amount The amount to withdraw.
      */
    function withdrawTokens(
         address _token,
-        address _from,
+        // address _from,
         address _to,
         uint256 _amount
     ) external nonReentrant _isProposal(msg.sender){
         require(_amount > 0, "Withdrawal amount must be greater than zero");
 
-        DepositedTokens[] storage deposits = tokenDeposited[_from];
-        bool tokenFound = false;
-        for (uint256 i = 0; i < deposits.length; i++) {
-            if (deposits[i].token == _token) {
-                require(
-                    deposits[i].balance >= _amount,
-                    "Insufficient deposited balance"
-                );
+        // DepositedTokens[] storage deposits = tokenDeposited[_from];
 
-                deposits[i].balance -= _amount;
-                if (deposits[i].balance == 0) {
-                    deposits[i] = deposits[deposits.length - 1];
-                    deposits.pop();
-                }
-                tokenFound = true;
-                break;
-            }
-        }
+        // bool tokenFound = false;
+        // for (uint256 i = 0; i < deposits.length; i++) {
+        //     if (deposits[i].token == _token) {
+        //         require(
+        //             deposits[i].balance >= _amount,
+        //             "Insufficient deposited balance"
+        //         );
 
-        require(tokenFound, "Token not deposited");
+        //         deposits[i].balance -= _amount;
+        //         if (deposits[i].balance == 0) {
+        //             deposits[i] = deposits[deposits.length - 1];
+        //             deposits.pop();
+        //         }
+        //         tokenFound = true;
+        //         break;
+        //     }
+        // }
+
+        // require(tokenFound, "Token not deposited");
 
         ERC20 token = ERC20(_token);
         require(
@@ -297,7 +297,7 @@ contract DAO is IDAO, ReentrancyGuard {
         bool success = token.transfer(_to, _amount);
         require(success, "Token transfer failed");
 
-        // Remove the token from treasury if balance is zero
+       
     }
 
     function _getTreasuryTokenCount() internal view returns (uint256) {
@@ -337,7 +337,7 @@ contract DAO is IDAO, ReentrancyGuard {
      */
     function addDAOMembers(DAOMember[] memory members) public {
         require(
-            isDAOMember[msg.sender] || isProposal[msg.sender],
+            (isDAOMember[msg.sender] && membersCount == 0)|| isProposal[msg.sender],
             DAONotADaoMember()
         );
         for (uint32 i = 0; i < members.length; i++) {
@@ -428,6 +428,7 @@ contract DAO is IDAO, ReentrancyGuard {
      * @param _proposalCreationParams The new proposal creation settings.
     
      */
+     
     function updateProposalMemberSettings(
         ProposalCreationSettings memory _proposalCreationParams
     ) external _isProposal(msg.sender) {

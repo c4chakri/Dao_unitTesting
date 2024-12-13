@@ -3,6 +3,7 @@ pragma solidity ^0.8.21;
 
 /**
  * @title IDAO
+ * @author c4Chackri
  * @dev Interface defining the structure and core functions for a DAO (Decentralized Autonomous Organization).
  */
 interface IDAO {
@@ -124,13 +125,11 @@ interface IDAO {
     /**
      * @dev Withdraws tokens from the DAO treasury.
      * @param _token The address of the token to withdraw.
-     * @param _from The address from which the tokens are withdrawn.
      * @param _to The recipient address for the tokens.
      * @param _amount The amount of tokens to withdraw.
      */
     function withdrawTokens(
         address _token,
-        address _from,
         address _to,
         uint256 _amount
     ) external;
