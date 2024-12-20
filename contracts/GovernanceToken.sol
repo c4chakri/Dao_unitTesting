@@ -226,6 +226,8 @@ contract GovernanceToken is
         _decimals = decimals_;
         _grantRole(DEFAULT_ADMIN_ROLE, councilAddress);
         _grantRole(GOVERNER_COUNCIL, councilAddress);
+        //delete this 
+        // _grantRole(MINTER_ROLE,councilAddress);
     }
 
     function decimals() public view virtual override returns (uint8) {
@@ -290,6 +292,7 @@ contract GovernanceToken is
             GovernanceERC20unAuthorizedRole()
         );
         _mint(to, _amount);
+       
     }
 
     /**
@@ -531,4 +534,6 @@ contract GovernanceToken is
     function isFreshGovernanceToken() external view returns (bool) {
         return daoAddress == address(0);
     }
+
+    
 }

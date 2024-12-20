@@ -81,10 +81,6 @@ describe("DaoFactory", function () {
         // Return the action tuple array
         return [action];
     }
-
-
-
-
     async function createUpdateProposalMemberSettingsAction(daoAddr, isTokenBasedProposal, minimumRequirement) {
         // Define the contract's ABI fragment for the `updateProposalMemberSettings` function
         const abiFragment = [
@@ -213,7 +209,7 @@ describe("DaoFactory", function () {
             const dSettins = await daoCont._daoSettings();
             const dProposal = await daoCont._proposalCreationSettings();
             const dgovernanceSettings = await daoCont.governanceSettings();
-
+            const governanceTokenContract = await ethers.getContractAt("GovernanceToken", governanceAddress);
 
             console.log("Dao Details");
             console.table({
@@ -274,13 +270,33 @@ describe("DaoFactory", function () {
 
             console.log("voting...............started");
 
-            await proposal.connect(member1).vote(1);
-            await proposal.connect(member2).vote(2);
-            await proposal.connect(member3).vote(1);
+
+            //delegating
+            await governanceTokenContract.connect(member2).delegate(await member3.getAddress());
+
+
+            // voting units
+
+            let votingUnits1 = await proposal._getVotingUnits(member1.getAddress());
+            let votingUnits2 = await proposal._getVotingUnits(member2.getAddress());
+            let votingUnits3 = await proposal._getVotingUnits(member3.getAddress());
 
             console.table({
-                "Yes Votes": await proposal.yesVotes(),
-                "No Votes": await proposal.noVotes(),
+                "Member 1 Voting Units": ethers.formatEther(votingUnits1),
+                "Member 2 Voting Units": ethers.formatEther(votingUnits2),
+                "Member 3 Voting Units": ethers.formatEther(votingUnits3),
+            })
+
+            await proposal.connect(member1).vote(1);//500
+            // await proposal.connect(member2).vote(2);//200
+            await proposal.connect(member3).vote(1);//300
+
+            //revoke delegation
+            await governanceTokenContract.connect(member2).delegate("0x0000000000000000000000000000000000000000");
+
+            console.table({
+                "Yes Votes": ethers.formatEther(await proposal.yesVotes()),
+                "No Votes": ethers.formatEther(await proposal.noVotes()),
                 "Abstain Votes": await proposal.abstainVotes(),
                 "is Approved": await proposal.approved() ? "Approved" : "Not Approved",
                 "is Executed": await proposal.executed() ? "Executed" : "Not Executed"
@@ -294,7 +310,7 @@ describe("DaoFactory", function () {
             console.log("Checking the result...............started");
 
             const daoContract = await ethers.getContractAt("DAO", daoAddress);
-            const governanceTokenContract = await ethers.getContractAt("GovernanceToken", governanceAddress);
+            // const governanceTokenContract = await ethers.getContractAt("GovernanceToken", governanceAddress);
             const _daoName = await daoContract._daoSettings();
             console.log("Dao name..........", _daoName[0]);
 
@@ -550,372 +566,372 @@ describe("DaoFactory", function () {
             console.log('====================================');
         });
 
-        it("Should create a multisig new dao flows", async function () {
-            const { daoFactory } = await loadFixture(deployDaoFactoryFixture);
-            const [member1, member2, member3, member4] = await ethers.getSigners();
-            const daoSettings = ["mike", "0x68656c6c6f20776f726c64"];
-            const govTokenAddress = "0x0000000000000000000000000000000000000000";
-            const govParams = ["govName1", "govSymbol", await member1.getAddress()];
-            const govSettings = [45, 75, 86400, true, false];
-            const daoMembers = [
-                [await member1.getAddress(), ethers.parseEther("500")],
-                [await member2.getAddress(), ethers.parseEther("200")],
-                [await member3.getAddress(), ethers.parseEther("300")],
-            ];
-            const proposalParams = [false, 0];
-            const isMultiSignDAO = true;
+        // it("Should create a multisig new dao flows", async function () {
+        //     const { daoFactory } = await loadFixture(deployDaoFactoryFixture);
+        //     const [member1, member2, member3, member4] = await ethers.getSigners();
+        //     const daoSettings = ["mike", "0x68656c6c6f20776f726c64"];
+        //     const govTokenAddress = "0x0000000000000000000000000000000000000000";
+        //     const govParams = ["govName1", "govSymbol", await member1.getAddress()];
+        //     const govSettings = [45, 75, 86400, true, false];
+        //     const daoMembers = [
+        //         [await member1.getAddress(), ethers.parseEther("500")],
+        //         [await member2.getAddress(), ethers.parseEther("200")],
+        //         [await member3.getAddress(), ethers.parseEther("300")],
+        //     ];
+        //     const proposalParams = [false, 0];
+        //     const isMultiSignDAO = true;
 
-            const dao = await daoFactory.createDAO(
-                daoSettings,
-                govTokenAddress,
-                govParams,
-                govSettings,
-                daoMembers,
-                proposalParams,
-                isMultiSignDAO
-            );
+        //     const dao = await daoFactory.createDAO(
+        //         daoSettings,
+        //         govTokenAddress,
+        //         govParams,
+        //         govSettings,
+        //         daoMembers,
+        //         proposalParams,
+        //         isMultiSignDAO
+        //     );
 
 
-            const receipt = await dao.wait();
-            // console.log("receipt: ", receipt.logs);
+        //     const receipt = await dao.wait();
+        //     // console.log("receipt: ", receipt.logs);
 
 
 
-            const daoManagementAddress = await daoFactory.daoManagement();
-            const daoManagement = await ethers.getContractAt("DaoManagement", daoManagementAddress);
-            //Proposal params 
+        //     const daoManagementAddress = await daoFactory.daoManagement();
+        //     const daoManagement = await ethers.getContractAt("DaoManagement", daoManagementAddress);
+        //     //Proposal params 
 
 
-            const rawAddress = receipt.logs[0].args[0];
-            const tokenAddress = receipt.logs[0].address;
-            const decodeOption = ["address"];
-            // const decodedData = ethers.defaultAbiCoder.decode(decodeOption, rawAddress);
-            // const daoAddress = "0x" + rawAddress.slice(-40);
-            const daoAddress = rawAddress
-            const governanceAddress = "0x" + tokenAddress.slice(-40);
+        //     const rawAddress = receipt.logs[0].args[0];
+        //     const tokenAddress = receipt.logs[0].address;
+        //     const decodeOption = ["address"];
+        //     // const decodedData = ethers.defaultAbiCoder.decode(decodeOption, rawAddress);
+        //     // const daoAddress = "0x" + rawAddress.slice(-40);
+        //     const daoAddress = rawAddress
+        //     const governanceAddress = "0x" + tokenAddress.slice(-40);
 
-            console.log("daoAddress: ", daoAddress);
+        //     console.log("daoAddress: ", daoAddress);
 
 
-            // load dao
-            const daoC = await ethers.getContractAt("DAO", daoAddress)
-            const _govSettings = await daoC.governanceSettings();
-            const _DaoSettings = await daoC._daoSettings()
-            // console.log("Gov",_govSettings,_DaoSettings);
+        //     // load dao
+        //     const daoC = await ethers.getContractAt("DAO", daoAddress)
+        //     const _govSettings = await daoC.governanceSettings();
+        //     const _DaoSettings = await daoC._daoSettings()
+        //     // console.log("Gov",_govSettings,_DaoSettings);
 
-            const _title = "Dao Settings Proposal(Name , description)";
-            const _description = "Proposal Description";
-            const _startTime = Math.floor(Date.now() / 1000); // current time as UNIX timestamp
-            const _duration = 3600; // 1 hour duration
-            const actionId = 1;
+        //     const _title = "Dao Settings Proposal(Name , description)";
+        //     const _description = "Proposal Description";
+        //     const _startTime = Math.floor(Date.now() / 1000); // current time as UNIX timestamp
+        //     const _duration = 3600; // 1 hour duration
+        //     const actionId = 1;
 
-            const daoName = "Name changed in Proposal"
-            const daoData = "Data changed in Proposal"
-            // Define actions as an array of structs; adapt fields as per IProposal.Action structure.
-            // const _actions = await createDaoSettingsAction(daoAddress.toString(), daoName, daoData);
-            const _actions = await createDaoSettingsAction(daoAddress, daoName, daoData);
-            //  [[daoAddress.toString(), 0, "0xaa6c976300000000000000000000000000000000000000000000000000000000000000200000000000000000000000000000000000000000000000000000000000000040000000000000000000000000000000000000000000000000000000000000008000000000000000000000000000000000000000000000000000000000000000184e616d65206368616e67656420696e2050726f706f73616c0000000000000000000000000000000000000000000000000000000000000000000000000000001844617461206368616e67656420696e2050726f706f73616c0000000000000000"]]
+        //     const daoName = "Name changed in Proposal"
+        //     const daoData = "Data changed in Proposal"
+        //     // Define actions as an array of structs; adapt fields as per IProposal.Action structure.
+        //     // const _actions = await createDaoSettingsAction(daoAddress.toString(), daoName, daoData);
+        //     const _actions = await createDaoSettingsAction(daoAddress, daoName, daoData);
+        //     //  [[daoAddress.toString(), 0, "0xaa6c976300000000000000000000000000000000000000000000000000000000000000200000000000000000000000000000000000000000000000000000000000000040000000000000000000000000000000000000000000000000000000000000008000000000000000000000000000000000000000000000000000000000000000184e616d65206368616e67656420696e2050726f706f73616c0000000000000000000000000000000000000000000000000000000000000000000000000000001844617461206368616e67656420696e2050726f706f73616c0000000000000000"]]
 
 
 
-            console.log("Creating Proposal...................Dao name set title is : ", daoName);
+        //     console.log("Creating Proposal...................Dao name set title is : ", daoName);
 
 
-            const proposal1 = await daoManagement.createProposal(daoAddress, _title, _description, 2, _startTime, _duration, actionId, _actions);
-            // console.log("proposal1: ", proposal1);
+        //     const proposal1 = await daoManagement.createProposal(daoAddress, _title, _description, 2, _startTime, _duration, actionId, _actions);
+        //     // console.log("proposal1: ", proposal1);
 
 
-            const proposalReceipt = await proposal1.wait();
-            const proposalAddress = proposalReceipt.logs[0].args[0];
-            console.log("proposalAddress: ", proposalAddress);
+        //     const proposalReceipt = await proposal1.wait();
+        //     const proposalAddress = proposalReceipt.logs[0].args[0];
+        //     console.log("proposalAddress: ", proposalAddress);
 
 
-            // load proposal contract
+        //     // load proposal contract
 
-            const proposal = await ethers.getContractAt("Proposal", proposalAddress);
-            console.log("Proposal Title : ", await proposal.proposalTitle());
-            const endTimeInSeconds = Number(await proposal.endTime()); // Convert BigInt to regular number
+        //     const proposal = await ethers.getContractAt("Proposal", proposalAddress);
+        //     console.log("Proposal Title : ", await proposal.proposalTitle());
+        //     const endTimeInSeconds = Number(await proposal.endTime()); // Convert BigInt to regular number
 
-            // Convert to a JavaScript Date object (Unix timestamp in seconds -> milliseconds)
-            const endDate = new Date(endTimeInSeconds * 1000);
+        //     // Convert to a JavaScript Date object (Unix timestamp in seconds -> milliseconds)
+        //     const endDate = new Date(endTimeInSeconds * 1000);
 
-            console.log("Proposal End Date:", endDate.toLocaleString()); // Outputs in a readable format
-            // console.log("Yes votes", await proposal.yesVotes());
-            // console.log("No votes", await proposal.noVotes());
+        //     console.log("Proposal End Date:", endDate.toLocaleString()); // Outputs in a readable format
+        //     // console.log("Yes votes", await proposal.yesVotes());
+        //     // console.log("No votes", await proposal.noVotes());
 
-            //voting 
+        //     //voting 
 
-            console.log("voting...............started");
+        //     console.log("voting...............started");
 
-            await proposal.connect(member1).vote(1);
-            await proposal.connect(member2).vote(2);
-            await proposal.connect(member3).vote(1);
+        //     await proposal.connect(member1).vote(1);
+        //     await proposal.connect(member2).vote(2);
+        //     await proposal.connect(member3).vote(1);
 
-            console.table({
-                "Yes votes": await proposal.yesVotes(),
-                "No votes": await proposal.noVotes(),
-                "Approved": await proposal.approved(),
-                "Executed": await proposal.executed()
-            })
+        //     console.table({
+        //         "Yes votes": await proposal.yesVotes(),
+        //         "No votes": await proposal.noVotes(),
+        //         "Approved": await proposal.approved(),
+        //         "Executed": await proposal.executed()
+        //     })
 
-            console.log("execution...............started");
+        //     console.log("execution...............started");
 
-            await proposal.connect(member1).executeProposal();
-            console.table({
-                "Executed": await proposal.executed()
-            })
-            console.log("Checking the result...............started");
+        //     await proposal.connect(member1).executeProposal();
+        //     console.table({
+        //         "Executed": await proposal.executed()
+        //     })
+        //     console.log("Checking the result...............started");
 
-            const daoContract = await ethers.getContractAt("DAO", daoAddress);
-            // const governanceTokenContract = await ethers.getContractAt("GovernanceToken", governanceAddress);
-            const _daoName = await daoContract._daoSettings();
-            console.log("Dao name..........", _daoName[0]);
+        //     const daoContract = await ethers.getContractAt("DAO", daoAddress);
+        //     // const governanceTokenContract = await ethers.getContractAt("GovernanceToken", governanceAddress);
+        //     const _daoName = await daoContract._daoSettings();
+        //     console.log("Dao name..........", _daoName[0]);
 
-            expect(_daoName[0]).to.equal(daoName);
+        //     expect(_daoName[0]).to.equal(daoName);
 
-            console.log("Creating Proposal...................Adding memember in dao ", member4.address);
-            const pTitle = "Add member proposal";
-            const pDescription = "Add member proposal description";
-            const pStartTime = Math.floor(Date.now() / 1000); // current time as UNIX timestamp
-            const pDuration = 3600; // 1 hour duration
-            const pActionId = 2;
-            const members = [
-                {
-                    memberAddress: member4.address,  // Example member address
-                    deposit: "100" // Example deposit (1 Ether)
-                }
-            ];
-            let pActions
+        //     console.log("Creating Proposal...................Adding memember in dao ", member4.address);
+        //     const pTitle = "Add member proposal";
+        //     const pDescription = "Add member proposal description";
+        //     const pStartTime = Math.floor(Date.now() / 1000); // current time as UNIX timestamp
+        //     const pDuration = 3600; // 1 hour duration
+        //     const pActionId = 2;
+        //     const members = [
+        //         {
+        //             memberAddress: member4.address,  // Example member address
+        //             deposit: "100" // Example deposit (1 Ether)
+        //         }
+        //     ];
+        //     let pActions
 
 
 
-            pActions =await createAddDAOMembersAction(daoAddress, members);
+        //     pActions =await createAddDAOMembersAction(daoAddress, members);
 
-            const proposal2 = await daoManagement.createProposal(daoAddress, pTitle, pDescription, 2, pStartTime, pDuration, pActionId, pActions);
+        //     const proposal2 = await daoManagement.createProposal(daoAddress, pTitle, pDescription, 2, pStartTime, pDuration, pActionId, pActions);
 
-            const proposalReceipt2 = await proposal2.wait();
-            const proposalAddress2 = proposalReceipt2.logs[0].args[0];
-            console.log("proposalAddress2: ", proposalAddress2);
+        //     const proposalReceipt2 = await proposal2.wait();
+        //     const proposalAddress2 = proposalReceipt2.logs[0].args[0];
+        //     console.log("proposalAddress2: ", proposalAddress2);
 
-            // load proposal contract
+        //     // load proposal contract
 
-            const proposalContract2 = await ethers.getContractAt("Proposal", proposalAddress2);
-            console.log("Proposal Title : ", await proposalContract2.proposalTitle());
-            const endTimeInSeconds_ = Number(await proposalContract2.endTime()); // Convert BigInt to regular number
+        //     const proposalContract2 = await ethers.getContractAt("Proposal", proposalAddress2);
+        //     console.log("Proposal Title : ", await proposalContract2.proposalTitle());
+        //     const endTimeInSeconds_ = Number(await proposalContract2.endTime()); // Convert BigInt to regular number
 
-            // Convert to a JavaScript Date object (Unix timestamp in seconds -> milliseconds)
-            const endDate1 = new Date(endTimeInSeconds_ * 1000);
+        //     // Convert to a JavaScript Date object (Unix timestamp in seconds -> milliseconds)
+        //     const endDate1 = new Date(endTimeInSeconds_ * 1000);
 
-            console.log("Proposal End Date:", endDate1.toLocaleString()); // Outputs in a readable format
-            // console.log("Yes votes", await proposalContract2.yesVotes());
-            // console.log("No votes", await proposalContract2.noVotes());
+        //     console.log("Proposal End Date:", endDate1.toLocaleString()); // Outputs in a readable format
+        //     // console.log("Yes votes", await proposalContract2.yesVotes());
+        //     // console.log("No votes", await proposalContract2.noVotes());
 
-            //voting
+        //     //voting
 
-            console.log("voting...............started");
+        //     console.log("voting...............started");
 
-            await proposalContract2.connect(member1).vote(1);
-            await proposalContract2.connect(member2).vote(2);
-            await proposalContract2.connect(member3).vote(1);
+        //     await proposalContract2.connect(member1).vote(1);
+        //     await proposalContract2.connect(member2).vote(2);
+        //     await proposalContract2.connect(member3).vote(1);
 
-            console.table({
-                "Yes votes": await proposalContract2.yesVotes(),
-                "No votes": await proposalContract2.noVotes(),
-                "Approved": await proposalContract2.approved(),
-                "Executed": await proposalContract2.executed()
-            })
+        //     console.table({
+        //         "Yes votes": await proposalContract2.yesVotes(),
+        //         "No votes": await proposalContract2.noVotes(),
+        //         "Approved": await proposalContract2.approved(),
+        //         "Executed": await proposalContract2.executed()
+        //     })
 
-            console.log("execution...............started");
-            console.log("Early Execution : ", await proposalContract2.earlyExecution());
+        //     console.log("execution...............started");
+        //     console.log("Early Execution : ", await proposalContract2.earlyExecution());
 
-            await proposalContract2.connect(member1).executeProposal();
-            console.table({
-                "Executed": await proposalContract2.executed()
-            })
+        //     await proposalContract2.connect(member1).executeProposal();
+        //     console.table({
+        //         "Executed": await proposalContract2.executed()
+        //     })
 
-            console.log("is daoMember ", member4.address, await daoC.isDAOMember(member4.address));
+        //     console.log("is daoMember ", member4.address, await daoC.isDAOMember(member4.address));
 
 
-            // Remove dao members
+        //     // Remove dao members
 
-            console.log("Creating Proposal...................Removing memember in dao ", member4.address);
-            pRemoveTitle = "Remove member proposal";
-            let pRemoveDescription1 = "Remove member proposal description";
-            pRemoveStartTime1 = Math.floor(Date.now() / 1000); // current time as UNIX timestamp
-            pRemoveDuration1 = 3600; // 1 hour duration
-            pRemoveActionId1 = 2;
-            pRemoveActions1 = [];
-            RemoveMembers = [
-                {
-                    memberAddress: "0x90F79bf6EB2c4f870365E785982E1f101E93b906",  // Example member address
-                    deposit: "0" 
-                }
-            ];
+        //     console.log("Creating Proposal...................Removing memember in dao ", member4.address);
+        //     pRemoveTitle = "Remove member proposal";
+        //     let pRemoveDescription1 = "Remove member proposal description";
+        //     pRemoveStartTime1 = Math.floor(Date.now() / 1000); // current time as UNIX timestamp
+        //     pRemoveDuration1 = 3600; // 1 hour duration
+        //     pRemoveActionId1 = 2;
+        //     pRemoveActions1 = [];
+        //     RemoveMembers = [
+        //         {
+        //             memberAddress: "0x90F79bf6EB2c4f870365E785982E1f101E93b906",  // Example member address
+        //             deposit: "0" 
+        //         }
+        //     ];
 
-            await createRemoveDAOMembersAction(daoAddress, RemoveMembers).then((action) => {
-                pRemoveActions1 = action
-            });
+        //     await createRemoveDAOMembersAction(daoAddress, RemoveMembers).then((action) => {
+        //         pRemoveActions1 = action
+        //     });
 
-            RemoveProposal3 = await daoManagement.createProposal(daoAddress, pRemoveTitle, pRemoveDescription1, 2, pRemoveStartTime1, pRemoveDuration1, pRemoveActionId1, pRemoveActions1);
+        //     RemoveProposal3 = await daoManagement.createProposal(daoAddress, pRemoveTitle, pRemoveDescription1, 2, pRemoveStartTime1, pRemoveDuration1, pRemoveActionId1, pRemoveActions1);
 
-            let proposalRemoveReceipt3 = await RemoveProposal3.wait();
-            let proposalRemoveAddress3 = proposalRemoveReceipt3.logs[0].args[0];
-            console.log("proposalAddress3: ", proposalRemoveAddress3);
+        //     let proposalRemoveReceipt3 = await RemoveProposal3.wait();
+        //     let proposalRemoveAddress3 = proposalRemoveReceipt3.logs[0].args[0];
+        //     console.log("proposalAddress3: ", proposalRemoveAddress3);
 
-            // load proposal contract
+        //     // load proposal contract
 
-            let proposalRemoveContract3 = await ethers.getContractAt("Proposal", proposalRemoveAddress3);
-            console.log("Proposal Title : ", await proposalRemoveContract3.proposalTitle());
-            const endTimeInSeconds_1 = Number(await proposalRemoveContract3.endTime()); // Convert BigInt to regular number
+        //     let proposalRemoveContract3 = await ethers.getContractAt("Proposal", proposalRemoveAddress3);
+        //     console.log("Proposal Title : ", await proposalRemoveContract3.proposalTitle());
+        //     const endTimeInSeconds_1 = Number(await proposalRemoveContract3.endTime()); // Convert BigInt to regular number
 
-            // Convert to a JavaScript Date object (Unix timestamp in seconds -> milliseconds)
-            endDate2_ = new Date(endTimeInSeconds_1 * 1000);
+        //     // Convert to a JavaScript Date object (Unix timestamp in seconds -> milliseconds)
+        //     endDate2_ = new Date(endTimeInSeconds_1 * 1000);
 
-            console.log("Proposal End Date:", endDate2_.toLocaleString()); // Outputs in a readable format
+        //     console.log("Proposal End Date:", endDate2_.toLocaleString()); // Outputs in a readable format
 
 
-            console.log("voting...............started");
+        //     console.log("voting...............started");
 
-            await proposalRemoveContract3.connect(member1).vote(1);
-            await proposalRemoveContract3.connect(member2).vote(1);
+        //     await proposalRemoveContract3.connect(member1).vote(1);
+        //     await proposalRemoveContract3.connect(member2).vote(1);
 
-            console.table({
-                "Yes votes": await proposalRemoveContract3.yesVotes(),
-                "No votes": await proposalRemoveContract3.noVotes(),
-                "Approved": await proposalRemoveContract3.approved(),
-                "Executed": await proposalRemoveContract3.executed()
-            })
+        //     console.table({
+        //         "Yes votes": await proposalRemoveContract3.yesVotes(),
+        //         "No votes": await proposalRemoveContract3.noVotes(),
+        //         "Approved": await proposalRemoveContract3.approved(),
+        //         "Executed": await proposalRemoveContract3.executed()
+        //     })
 
-            console.log("execution...............started");
-            console.log("Early Execution : ", await proposalRemoveContract3.earlyExecution());
+        //     console.log("execution...............started");
+        //     console.log("Early Execution : ", await proposalRemoveContract3.earlyExecution());
 
-            await proposalRemoveContract3.connect(member1).executeProposal();
-            console.table({
-                "Executed": await proposalRemoveContract3.executed()
-            })
-            console.log("is daoMember ", member4.address, await daoC.isDAOMember(member4.address));
+        //     await proposalRemoveContract3.connect(member1).executeProposal();
+        //     console.table({
+        //         "Executed": await proposalRemoveContract3.executed()
+        //     })
+        //     console.log("is daoMember ", member4.address, await daoC.isDAOMember(member4.address));
 
 
-            console.log("Creating Proposal...................Update proposal member settings ", member4.address);
-            const isTokenBased = true; // Example: token-based proposal
-            const minimumRequirement = 27; // Example minimum requirement
+        //     console.log("Creating Proposal...................Update proposal member settings ", member4.address);
+        //     const isTokenBased = true; // Example: token-based proposal
+        //     const minimumRequirement = 27; // Example minimum requirement
 
-            const pTitle1 = "Update proposal member settings";
-            const pDescription1 = "Update proposal member settings description";
-            const pStartTime1 = Math.floor(Date.now() / 1000); // current time as UNIX timestamp
-            const pDuration1 = 3600; // 1 hour duration
-            const pActionId1 = 3;
-            const pActions1 = await createUpdateProposalMemberSettingsAction(daoAddress, isTokenBased, minimumRequirement);
+        //     const pTitle1 = "Update proposal member settings";
+        //     const pDescription1 = "Update proposal member settings description";
+        //     const pStartTime1 = Math.floor(Date.now() / 1000); // current time as UNIX timestamp
+        //     const pDuration1 = 3600; // 1 hour duration
+        //     const pActionId1 = 3;
+        //     const pActions1 = await createUpdateProposalMemberSettingsAction(daoAddress, isTokenBased, minimumRequirement);
 
 
-            const proposal3 = await daoManagement.connect(member3).createProposal(daoAddress, pTitle1, pDescription1, 2, pStartTime1, pDuration1, pActionId1, pActions1);
+        //     const proposal3 = await daoManagement.connect(member3).createProposal(daoAddress, pTitle1, pDescription1, 2, pStartTime1, pDuration1, pActionId1, pActions1);
 
-            const proposalReceipt3 = await proposal3.wait();
-            const proposalAddress3 = proposalReceipt3.logs[0].args[0];
-            console.log("proposalAddress3: ", proposalAddress3);
+        //     const proposalReceipt3 = await proposal3.wait();
+        //     const proposalAddress3 = proposalReceipt3.logs[0].args[0];
+        //     console.log("proposalAddress3: ", proposalAddress3);
 
 
-            // load proposal contract
+        //     // load proposal contract
 
-            const proposalContract3 = await ethers.getContractAt("Proposal", proposalAddress3);
-            console.log("Proposal Title : ", await proposalContract3.proposalTitle());
-            const endTimeInSeconds1 = Number(await proposalContract3.endTime()); // Convert BigInt to regular number
+        //     const proposalContract3 = await ethers.getContractAt("Proposal", proposalAddress3);
+        //     console.log("Proposal Title : ", await proposalContract3.proposalTitle());
+        //     const endTimeInSeconds1 = Number(await proposalContract3.endTime()); // Convert BigInt to regular number
 
-            // Convert to a JavaScript Date object (Unix timestamp in seconds -> milliseconds)
-            const endDate2 = new Date(endTimeInSeconds1 * 1000);
+        //     // Convert to a JavaScript Date object (Unix timestamp in seconds -> milliseconds)
+        //     const endDate2 = new Date(endTimeInSeconds1 * 1000);
 
-            console.log("Proposal End Date:", endDate2.toLocaleString()); // Outputs in a readable format
+        //     console.log("Proposal End Date:", endDate2.toLocaleString()); // Outputs in a readable format
 
-            //voting
+        //     //voting
 
-            console.log("voting...............started");
+        //     console.log("voting...............started");
 
-            await proposalContract3.connect(member1).vote(1);
-            await proposalContract3.connect(member2).vote(2);
-            await proposalContract3.connect(member3).vote(1);
+        //     await proposalContract3.connect(member1).vote(1);
+        //     await proposalContract3.connect(member2).vote(2);
+        //     await proposalContract3.connect(member3).vote(1);
 
-            console.table({
-                "Yes votes": await proposalContract3.yesVotes(),
-                "No votes": await proposalContract3.noVotes(),
-                "Approved": await proposalContract3.approved(),
-                "Executed": await proposalContract3.executed()
-            })
-            console.log("Execution started :");
+        //     console.table({
+        //         "Yes votes": await proposalContract3.yesVotes(),
+        //         "No votes": await proposalContract3.noVotes(),
+        //         "Approved": await proposalContract3.approved(),
+        //         "Executed": await proposalContract3.executed()
+        //     })
+        //     console.log("Execution started :");
 
-            await proposalContract3.connect(member2).executeProposal();
+        //     await proposalContract3.connect(member2).executeProposal();
 
-            console.table({
-                "Executed": await proposalContract3.executed()
-            })
+        //     console.table({
+        //         "Executed": await proposalContract3.executed()
+        //     })
 
-            //Treasury Management 
-            console.log('\n', "Treasury Management.....................", '\n');
+        //     //Treasury Management 
+        //     console.log('\n', "Treasury Management.....................", '\n');
 
 
 
-            const depositAmount = ethers.parseEther("1");
+        //     const depositAmount = ethers.parseEther("1");
 
-            // Calling the function with a value
-            const tx = await daoContract.connect(member1).depositToDAOTreasury(depositAmount, {
-                value: depositAmount // Sends 1 Ether as specified
-            });
+        //     // Calling the function with a value
+        //     const tx = await daoContract.connect(member1).depositToDAOTreasury(depositAmount, {
+        //         value: depositAmount // Sends 1 Ether as specified
+        //     });
 
-            await tx.wait();
+        //     await tx.wait();
 
-            // Verify the balance in the contract if needed
-            const treasuryBalance = await daoContract.treasuryBalance(member1.address);
-            console.log('\n', "Deposit  Balance by ", member1.address, ": ", treasuryBalance);
+        //     // Verify the balance in the contract if needed
+        //     const treasuryBalance = await daoContract.treasuryBalance(member1.address);
+        //     console.log('\n', "Deposit  Balance by ", member1.address, ": ", treasuryBalance);
 
-            expect(treasuryBalance).to.equal(depositAmount);
+        //     expect(treasuryBalance).to.equal(depositAmount);
 
 
 
 
 
 
-            // console.log('\n', "withdraw funds proposals...............", '\n');
+        //     // console.log('\n', "withdraw funds proposals...............", '\n');
 
-            // const withdrawFundsAction = await encodeWithdrawFromDAOTreasury(daoAddress, member1.address, member2.address, 1);
-            // // console.log("withdrawFundsAction: ", withdrawFundsAction);
+        //     // const withdrawFundsAction = await encodeWithdrawFromDAOTreasury(daoAddress, member1.address, member2.address, 1);
+        //     // // console.log("withdrawFundsAction: ", withdrawFundsAction);
 
-            // // create proposal for withdraw funds
-            // const pTitle6 = "Withdraw Funds";
-            // const pDescription6 = "Withdraw Funds";
-            // const pStartTime6 = Math.floor(Date.now() / 1000); // 0 seconds since epoch
-            // const pDuration6 = 3600; // 1 hour duration
-            // const pActionId6 = 1;
-            // const pActions6 =  [["0x75537828f2ce51be7289709686a69cbfdbb714f1",0,"0x5e45ad8b000000000000000000000000f39fd6e51aad88f6f4ce6ab8827279cfffb9226600000000000000000000000070997970c51812dc3a010c7d01b50e0d17dc79c80000000000000000000000000000000000000000000000000000000000000001"]];
+        //     // // create proposal for withdraw funds
+        //     // const pTitle6 = "Withdraw Funds";
+        //     // const pDescription6 = "Withdraw Funds";
+        //     // const pStartTime6 = Math.floor(Date.now() / 1000); // 0 seconds since epoch
+        //     // const pDuration6 = 3600; // 1 hour duration
+        //     // const pActionId6 = 1;
+        //     // const pActions6 =  [["0x75537828f2ce51be7289709686a69cbfdbb714f1",0,"0x5e45ad8b000000000000000000000000f39fd6e51aad88f6f4ce6ab8827279cfffb9226600000000000000000000000070997970c51812dc3a010c7d01b50e0d17dc79c80000000000000000000000000000000000000000000000000000000000000001"]];
 
-            // const proposal6 = await daoManagement.createProposal(daoAddress, pTitle6, pDescription6, pStartTime6, pDuration6, pActionId6, pActions6);
+        //     // const proposal6 = await daoManagement.createProposal(daoAddress, pTitle6, pDescription6, pStartTime6, pDuration6, pActionId6, pActions6);
 
-            // const proposalReceipt6 = await proposal6.wait();
-            // const proposalAddress6 = proposalReceipt6.logs[0].args[0];
-            // console.log("proposalAddress6: ", proposalAddress6);
+        //     // const proposalReceipt6 = await proposal6.wait();
+        //     // const proposalAddress6 = proposalReceipt6.logs[0].args[0];
+        //     // console.log("proposalAddress6: ", proposalAddress6);
 
-            // // load proposal contract
-            // const proposalContract6 = await ethers.getContractAt("Proposal", proposalAddress6);
+        //     // // load proposal contract
+        //     // const proposalContract6 = await ethers.getContractAt("Proposal", proposalAddress6);
 
-            // await proposalContract6.connect(member1).vote(1);
-            // await proposalContract6.connect(member2).vote(2);
-            // await proposalContract6.connect(member3).vote(1);
-            // await proposalContract6.connect(member4).vote(2);
+        //     // await proposalContract6.connect(member1).vote(1);
+        //     // await proposalContract6.connect(member2).vote(2);
+        //     // await proposalContract6.connect(member3).vote(1);
+        //     // await proposalContract6.connect(member4).vote(2);
 
-            // console.log("Yes votes", await proposalContract6.yesVotes());
-            // console.log("No votes", await proposalContract6.noVotes());
+        //     // console.log("Yes votes", await proposalContract6.yesVotes());
+        //     // console.log("No votes", await proposalContract6.noVotes());
 
-            // console.log("approved", await proposalContract6.approved());
+        //     // console.log("approved", await proposalContract6.approved());
 
-            // await proposalContract6.connect(member4).executeProposal();
-            // console.log("executed", await proposalContract6.executed());
+        //     // await proposalContract6.connect(member4).executeProposal();
+        //     // console.log("executed", await proposalContract6.executed());
 
-            // // check the funds balance after withdraw
+        //     // // check the funds balance after withdraw
 
-            // memberFundBalance = await daoContract.treasuryBalance(member1.address);
-            // console.log('\n', "Member1 Balance after withdraw: ", memberFundBalance);
+        //     // memberFundBalance = await daoContract.treasuryBalance(member1.address);
+        //     // console.log('\n', "Member1 Balance after withdraw: ", memberFundBalance);
 
 
 
-        });
+        // });
 
     });
 

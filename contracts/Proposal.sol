@@ -106,7 +106,7 @@ contract Proposal is IProposal {
         Action[] memory _actions
     ) {
         daoAddress = _daoAddress;
-        dao = DAO(daoAddress);
+        dao = DAO(payable(daoAddress));
         governanceTokenAddress = address(dao.governanceToken());
         proposerAddress = _proposerAddress;
         minApproval = _minApproval;
@@ -159,14 +159,22 @@ contract Proposal is IProposal {
      * @return The number of voting units the account possesses.
      */
 
-    function _getVotingUnits(address account) private view returns (uint256) {
-        if (dao.isMultiSignDAO()) {
-            return 1;
+    function _getVotingUnits(address account) public view returns (uint256) {
+    if (dao.isMultiSignDAO()) {
+        return 1;
+    } else {
+        ERC20Votes erc20 = ERC20Votes(governanceTokenAddress);
+
+        // Calculate votes based on delegation status
+        if (erc20.delegates(account) == address(0)) {
+            return erc20.balanceOf(account) + erc20.getVotes(account);
+        } else if (erc20.delegates(account) == account) {
+            return erc20.getVotes(account);
         } else {
-            ERC20Votes erc20 = ERC20Votes(governanceTokenAddress);
-            return erc20.balanceOf(account);
+            return 0; // Votes delegated to another account
         }
     }
+}
 
     /**
      * @dev Allows an eligible user to cast their vote on the proposal.

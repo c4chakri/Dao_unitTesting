@@ -36,6 +36,7 @@ contract DAO is IDAO, ReentrancyGuard {
      */
     GovernanceSettings public governanceSettings;
 
+    address private daoMangementAddress;
     /**
      * @dev Address of the creator of the DAO.
      */
@@ -156,6 +157,7 @@ contract DAO is IDAO, ReentrancyGuard {
         ProposalCreationSettings memory _proposalCreationParams,
         bool _isMultiSignDAO
     ) {
+        daoMangementAddress = daoManagementAddress;
         DaoManagement daoManagement = DaoManagement(daoManagementAddress);
         isMultiSignDAO = _isMultiSignDAO;
         if (!isMultiSignDAO) {
@@ -387,6 +389,7 @@ contract DAO is IDAO, ReentrancyGuard {
         string memory _title,
         uint8 _actionId
     ) external {
+        require(msg.sender == proposalAddress, DAOUnAuthorizedInteraction());
         proposals[proposalId] = ProposalInfo({
             deployedProposalAddress: proposalAddress,
             creator: _proposerAddress,
