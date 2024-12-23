@@ -294,6 +294,7 @@ describe("DaoFactory", function () {
             //revoke delegation
             await governanceTokenContract.connect(member2).delegate("0x0000000000000000000000000000000000000000");
 
+
             console.table({
                 "Yes Votes": ethers.formatEther(await proposal.yesVotes()),
                 "No Votes": ethers.formatEther(await proposal.noVotes()),
@@ -301,7 +302,17 @@ describe("DaoFactory", function () {
                 "is Approved": await proposal.approved() ? "Approved" : "Not Approved",
                 "is Executed": await proposal.executed() ? "Executed" : "Not Executed"
             })
-
+            console.log('====================================');
+            console.log("Delelegation Revoked");
+            console.log('====================================');
+                        votingUnits1 = await proposal._getVotingUnits(member1.getAddress());
+                        votingUnits2 = await proposal._getVotingUnits(member2.getAddress());
+                        votingUnits3 = await proposal._getVotingUnits(member3.getAddress());
+                        console.table({
+                            "Member 1 Voting Units": ethers.formatEther(votingUnits1),
+                            "Member 2 Voting Units": ethers.formatEther(votingUnits2),
+                            "Member 3 Voting Units": ethers.formatEther(votingUnits3),
+                        })
             console.log("execution...............started");
 
             await proposal.connect(member1).executeProposal();
