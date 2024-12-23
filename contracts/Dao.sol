@@ -180,14 +180,14 @@ contract DAO is IDAO, ReentrancyGuard {
      * @dev Allows members to deposit funds to the DAO's treasury.
      * @param _amount The amount (in wei) to deposit.
      */
-    function depositToDAOTreasury(uint256 _amount)
-        external
-        payable
-        canInteractWithDAO(msg.sender)
-    {
-        require(msg.value == _amount, "Incorrect amount sent");
-        treasuryBalance[msg.sender] += _amount;
-    }
+    // function depositToDAOTreasury(uint256 _amount)
+    //     external
+    //     payable
+    //     canInteractWithDAO(msg.sender)
+    // {
+    //     require(msg.value == _amount, "Incorrect amount sent");
+    //     treasuryBalance[msg.sender] += _amount;
+    // }
 
     /**
      * @dev Withdraws funds from the DAO treasury.
@@ -212,46 +212,46 @@ contract DAO is IDAO, ReentrancyGuard {
      * @param _amount Amount of tokens to deposit.
      */
     // Deposit tokens into DAO treasury
-    function depositTokens(address _token, uint256 _amount) external {
-        require(_amount > 0, "Deposit amount must be greater than zero");
+    // function depositTokens(address _token, uint256 _amount) external {
+    //     require(_amount > 0, "Deposit amount must be greater than zero");
 
-        ERC20 token = ERC20(_token);
-        require(
-            token.balanceOf(msg.sender) >= _amount,
-            "Insufficient token balance"
-        );
-        require(
-            token.allowance(msg.sender, address(this)) >= _amount,
-            "Insufficient allowance"
-        );
+    //     ERC20 token = ERC20(_token);
+    //     require(
+    //         token.balanceOf(msg.sender) >= _amount,
+    //         "Insufficient token balance"
+    //     );
+    //     require(
+    //         token.allowance(msg.sender, address(this)) >= _amount,
+    //         "Insufficient allowance"
+    //     );
 
-        bool success = token.transferFrom(msg.sender, address(this), _amount);
-        require(success, "Token transfer failed");
+    //     bool success = token.transferFrom(msg.sender, address(this), _amount);
+    //     require(success, "Token transfer failed");
 
-        // Update total deposits for the token
-        totalTokenDeposits[_token] += _amount;
+    //     // Update total deposits for the token
+    //     totalTokenDeposits[_token] += _amount;
 
-        // Add the token to the treasury if it's not already present
-        if (!isTokenInTreasury[_token]) {
-            treasuryTokens.push(_token);
-            isTokenInTreasury[_token] = true;
-        }
+    //     // Add the token to the treasury if it's not already present
+    //     if (!isTokenInTreasury[_token]) {
+    //         treasuryTokens.push(_token);
+    //         isTokenInTreasury[_token] = true;
+    //     }
 
-        // Update user deposits
-        bool tokenFound = false;
-        DepositedTokens[] storage deposits = tokenDeposited[msg.sender];
-        for (uint256 i = 0; i < deposits.length; i++) {
-            if (deposits[i].token == _token) {
-                deposits[i].balance += _amount;
-                tokenFound = true;
-                break;
-            }
-        }
+    //     // Update user deposits
+    //     bool tokenFound = false;
+    //     DepositedTokens[] storage deposits = tokenDeposited[msg.sender];
+    //     for (uint256 i = 0; i < deposits.length; i++) {
+    //         if (deposits[i].token == _token) {
+    //             deposits[i].balance += _amount;
+    //             tokenFound = true;
+    //             break;
+    //         }
+    //     }
 
-        if (!tokenFound) {
-            deposits.push(DepositedTokens({token: _token, balance: _amount}));
-        }
-    }
+    //     if (!tokenFound) {
+    //         deposits.push(DepositedTokens({token: _token, balance: _amount}));
+    //     }
+    // }
 
     /**
      * @dev Withdraws governance tokens from the DAO.
