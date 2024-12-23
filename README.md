@@ -5,6 +5,26 @@ This project demonstrates a basic Hardhat use case. It comes with a sample contr
 Try running some of the following tasks:
 
 ```shell
+
+
+Issues
+
+A have 50 votes
+B have 50 votes 
+C have 50 votes 
+
+A voted ; total Votes == 50
+B delegated to C; 
+C voted;  total Votes == 50 + 50 => 150
+
+Issue here
+
+B voted Again!!!  total Votes == 200
+
+```
+
+
+```shell
 npx hardhat help
 npx hardhat test
 REPORT_GAS=true npx hardhat test
