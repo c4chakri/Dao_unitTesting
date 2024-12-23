@@ -101,7 +101,7 @@ interface IDAO {
      * @dev Deposits Ether into the DAO treasury.
      * @param _amount The amount of Ether to deposit.
      */
-    function depositToDAOTreasury(uint256 _amount) external payable;
+    // function depositToDAOTreasury(uint256 _amount) external payable;
 
     /**
      * @dev Withdraws Ether from the DAO treasury.
@@ -120,7 +120,7 @@ interface IDAO {
      * @param _token The address of the token to deposit.
      * @param _amount The amount of tokens to deposit.
      */
-    function depositTokens(address _token, uint256 _amount) external;
+    // function depositTokens(address _token, uint256 _amount) external;
 
     /**
      * @dev Withdraws tokens from the DAO treasury.
