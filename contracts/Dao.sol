@@ -90,6 +90,8 @@ contract DAO is IDAO, ReentrancyGuard {
     /**
      * @dev Mapping of addresses to the amount of tokens deposited.
      */
+
+    mapping (address=>address) public delegator;
     struct DepositedTokens {
         address token;
         uint256 balance;
@@ -129,7 +131,7 @@ contract DAO is IDAO, ReentrancyGuard {
     modifier canInteractWithDAO(address account) {
         require(
             isDAOMember[account] || isProposal[msg.sender],
-            DAONotADaoMember()
+            DAONotADaoMember() 
         );
 
         if (blacklisted[account]) revert DAOBlacklistedAddress();
@@ -147,6 +149,7 @@ contract DAO is IDAO, ReentrancyGuard {
      * @param _proposalCreationParams Settings for creating proposals in the DAO.
      * @param _isMultiSignDAO Flag indicating if the DAO requires multi-signature for actions.
      */
+
     constructor(
         address daoManagementAddress,
         DaoSettings memory _daoParams,
@@ -180,6 +183,7 @@ contract DAO is IDAO, ReentrancyGuard {
      * @dev Allows members to deposit funds to the DAO's treasury.
      * @param _amount The amount (in wei) to deposit.
      */
+
     // function depositToDAOTreasury(uint256 _amount)
     //     external
     //     payable
@@ -191,19 +195,18 @@ contract DAO is IDAO, ReentrancyGuard {
 
     /**
      * @dev Withdraws funds from the DAO treasury.
-     * @param _from The address from which funds are deducted.
      * @param _to The recipient address.
      * @param amount The amount to withdraw.
      */
-    function withdrawFromDAOTreasury(
-        address _from,
-        address _to,
-        uint256 amount
-    ) external nonReentrant _isProposal(msg.sender) {
-        require(amount > 0, DAOInvalidAmount());
-        require(treasuryBalance[_from] >= amount, DAOInsufficientBalance());
-        treasuryBalance[_from] -= amount;
-        payable(_to).transfer(amount);
+    function withdrawFromDAOTreasury(address _to, uint256 amount)
+        external
+        nonReentrant
+        _isProposal(msg.sender)
+    {
+        require(amount > 0, "DAOInvalidAmount");
+        require(address(this).balance >= amount, "DAOInsufficientBalance");
+        (bool success, ) = payable(_to).call{value: amount}("");
+        require(success, "Transfer Failed");
     }
 
     /**
@@ -212,6 +215,7 @@ contract DAO is IDAO, ReentrancyGuard {
      * @param _amount Amount of tokens to deposit.
      */
     // Deposit tokens into DAO treasury
+
     // function depositTokens(address _token, uint256 _amount) external {
     //     require(_amount > 0, "Deposit amount must be greater than zero");
 
@@ -259,12 +263,12 @@ contract DAO is IDAO, ReentrancyGuard {
      * @param _to The recipient address.
      * @param _amount The amount to withdraw.
      */
-   function withdrawTokens(
+    function withdrawTokens(
         address _token,
-        // address _from,
+       
         address _to,
         uint256 _amount
-    ) external nonReentrant _isProposal(msg.sender){
+    ) external nonReentrant _isProposal(msg.sender) {
         require(_amount > 0, "Withdrawal amount must be greater than zero");
 
         // DepositedTokens[] storage deposits = tokenDeposited[_from];
@@ -290,47 +294,49 @@ contract DAO is IDAO, ReentrancyGuard {
         // require(tokenFound, "Token not deposited");
 
         ERC20 token = ERC20(_token);
+        // require(
+        //     totalTokenDeposits[_token] >= _amount,
+        //     "Insufficient treasury balance"
+        // );
+        // totalTokenDeposits[_token] -= _amount;
+
         require(
-            totalTokenDeposits[_token] >= _amount,
+            token.balanceOf(address(this)) >= _amount,
             "Insufficient treasury balance"
         );
-        totalTokenDeposits[_token] -= _amount;
-
         bool success = token.transfer(_to, _amount);
         require(success, "Token transfer failed");
-
-       
     }
 
-    function _getTreasuryTokenCount() internal view returns (uint256) {
-        return treasuryTokens.length;
-    }
+    // function _getTreasuryTokenCount() internal view returns (uint256) {
+    //     return treasuryTokens.length;
+    // }
 
-    function _getTreasuryTokenAt(uint256 index)
-        internal
-        view
-        returns (address)
-    {
-        require(index < treasuryTokens.length, "Index out of bounds");
-        return treasuryTokens[index];
-    }
+    // function _getTreasuryTokenAt(uint256 index)
+    //     internal
+    //     view
+    //     returns (address)
+    // {
+    //     require(index < treasuryTokens.length, "Index out of bounds");
+    //     return treasuryTokens[index];
+    // }
 
-    function getTotalTreasuryTokens()
-        external
-        view
-        returns (TokenBalance[] memory)
-    {
-        uint256 count = _getTreasuryTokenCount();
-        TokenBalance[] memory treasuryBalances = new TokenBalance[](count);
-        for (uint256 i = 0; i < count; i++) {
-            address token = _getTreasuryTokenAt(i);
-            treasuryBalances[i] = TokenBalance({
-                token: token,
-                balance: totalTokenDeposits[token]
-            });
-        }
-        return treasuryBalances;
-    }
+    // function getTotalTreasuryTokens()
+    //     external
+    //     view
+    //     returns (TokenBalance[] memory)
+    // {
+    //     uint256 count = _getTreasuryTokenCount();
+    //     TokenBalance[] memory treasuryBalances = new TokenBalance[](count);
+    //     for (uint256 i = 0; i < count; i++) {
+    //         address token = _getTreasuryTokenAt(i);
+    //         treasuryBalances[i] = TokenBalance({
+    //             token: token,
+    //             balance: totalTokenDeposits[token]
+    //         });
+    //     }
+    //     return treasuryBalances;
+    // }
 
     /**
      * @dev Adds new members to the DAO.
@@ -339,7 +345,8 @@ contract DAO is IDAO, ReentrancyGuard {
      */
     function addDAOMembers(DAOMember[] memory members) public {
         require(
-            (isDAOMember[msg.sender] && membersCount == 0)|| isProposal[msg.sender],
+            (isDAOMember[msg.sender] && membersCount == 0) ||
+                isProposal[msg.sender],
             DAONotADaoMember()
         );
         for (uint32 i = 0; i < members.length; i++) {
@@ -431,7 +438,7 @@ contract DAO is IDAO, ReentrancyGuard {
      * @param _proposalCreationParams The new proposal creation settings.
     
      */
-     
+
     function updateProposalMemberSettings(
         ProposalCreationSettings memory _proposalCreationParams
     ) external _isProposal(msg.sender) {
@@ -449,5 +456,25 @@ contract DAO is IDAO, ReentrancyGuard {
         returns (bool)
     {
         return true;
+    }
+
+
+    function delegate(address delegatee) external canInteractWithDAO(msg.sender){
+        require(delegatee != address(0), "Cannot delegate to zero");
+        require(governanceToken.balanceOf(msg.sender) >= 0, "Zero Delegated Power");
+        delegator[delegatee] = msg.sender;
+        governanceToken.delegate(delegatee);
+    }
+
+    function claimPower() external canInteractWithDAO(msg.sender){
+        require(governanceToken.delegates(msg.sender) != address(0),"You don't have delegates, to claim");
+        address _delegator = governanceToken.delegates(msg.sender);
+        delegator[_delegator] = address(0);
+        governanceToken.delegate(msg.sender);
+
+
+    }
+
+     fallback() external payable {
     }
 }
