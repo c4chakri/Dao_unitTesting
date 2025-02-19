@@ -590,56 +590,54 @@ describe("DaoFactory", function () {
 
 
             console.log("custom proposal --------------");
+            const title = "Custom Proposal";
+            const description = "Custom Proposal";
+            const startTime = Math.floor(Date.now() / 1000); // 0 seconds since epoch
+            const duration = 3600; // 1 hour duration
+            const actionId_ = 1;
+            const tetherContract = await ethers.getContractFactory("ProposalTestingToken");
+            const tether = await tetherContract.deploy();
 
-            const erc20 = await ethers.getContractFactory("ProposalTestingToken")
-            const proposalTestingTokenContract = await erc20.deploy();
+            const action = await encodeFunctionABIData(cABI.abi, "transfer", [member2.address, 19528]);
+            const actionData = [
+                [
+                    tether.target,
+                    0,
+                    action
+                ]
+            ]
+            console.log("actionData", actionData);
 
-            const cContractAddr = proposalTestingTokenContract.target
-            const abi = cABI.abi
-            const functionName = "approve"
-            const functionArgs = [member2.address, 100]
-            const data = await encodeFunctionABIData(abi, functionName, functionArgs)
-            const action = [cContractAddr, 0, data]
-            console.log("data", action);
+            const proposal_ = await daoManagement.createProposal(daoAddress, title, description, 2, startTime, duration, actionId_, actionData);
+            const proposalReceipt_ = await proposal_.wait();
+            const proposalAddress_ = proposalReceipt_.logs[0].args[0];
+            console.log("proposalAddress: ", proposalAddress);
 
-            // await proposalTestingTokenContract.transfer(member2, 1000)
-            let member2BalP = await proposalTestingTokenContract.balanceOf(member2)
-            console.log("mem2 bal", member2BalP);
+            // load proposal contract
+            const proposalContract_ = await ethers.getContractAt("Proposal", proposalAddress_);
 
-            console.log("creating custom proposal..............");
-            // const proposal6 = await daoManagement.createProposal(daoAddress, pTitle6, pDescription6, 2, pStartTime6, pDuration6, pActionId6, pActions6);
-            
-            const pProposal = await daoManagement.createProposal(daoAddress, pTitle6, pDescription6, 2, pStartTime6, pDuration6, pActionId6, pActions6);
-
-            const pProposalReceipt = await pProposal.wait();
-            const pProposalAddress6 = pProposalReceipt.logs[0].args[0];
-            console.log("pProposalAddress6: ", pProposalAddress6);
-
-            const pProposalContract = await ethers.getContractAt("Proposal",pProposalAddress6)
-            await pProposalContract.connect(member1).vote(1)
-            await pProposalContract.connect(member2).vote(1)
-            await pProposalContract.connect(member3).vote(1)
-            await pProposalContract.connect(member4).vote(1)
+            await proposalContract_.connect(member1).vote(1);
+            await proposalContract_.connect(member2).vote(1);
+            await proposalContract_.connect(member3).vote(1);
+            await proposalContract_.connect(member4).vote(1);
 
             console.table({
-                "Yes Votes": await pProposalContract.yesVotes(),
-                "No Votes": await pProposalContract.noVotes(),
-                "is Approved": await pProposalContract.approved() ? "Approved" : "Not Approved",                
-                "is Executed": await pProposalContract.executed() ? "Executed" : "Not Executed"
+                "Yes Votes": await proposalContract_.yesVotes(),
+                "No Votes": await proposalContract_.noVotes(),
+                "is Approved": await proposalContract_.approved() ? "Approved" : "Not Approved",
+                "is Executed": await proposalContract_.executed() ? "Executed" : "Not Executed"
             })
 
-            await pProposalContract.connect(member4).executeProposal();
+            await proposalContract_.connect(member4).executeProposal();
             console.table({
-                "is Executed": await pProposalContract.executed() ? "Executed" : "Not Executed"
+                "is Executed": await proposalContract_.executed() ? "Executed" : "Not Executed"
             })
 
-            // check bal after transfer
-            let allowance = await proposalTestingTokenContract.allowance(pProposalAddress6, member2.address)
-            console.log("allowance", allowance);
+            const _member2BalanceAfterWithdraw_ = await tether.balanceOf(member2.address);
+            console.log('\n', "Member2 Balance after withdraw: ", _member2BalanceAfterWithdraw_);
 
-        }); 
+        });
 
     });
-
 
 })
