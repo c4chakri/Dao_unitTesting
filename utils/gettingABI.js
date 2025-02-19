@@ -24,7 +24,8 @@ async function getContractABI(contractAddress) {
         const etherscanAPI = `https://api.etherscan.io/api?module=contract&action=getabi&address=${contractAddress}&apikey=${ETHERSCAN_API_KEY}`;
         const response = await fetch(etherscanAPI);
         const data = await response.json();
-
+        console.log(data);
+        
         if (data.status !== "1") {
             throw new Error(`Failed to fetch ABI: ${data.message}`);
         }
@@ -35,6 +36,38 @@ async function getContractABI(contractAddress) {
         return null;
     }
 }
+// async function getContractABI(contractAddress) {
+//     try {
+//         const etherscanAPI = `https://api.etherscan.io/api?module=contract&action=getabi&address=${contractAddress}&apikey=${ETHERSCAN_API_KEY}`;
+//         const response = await fetch(etherscanAPI);
+//         const data = await response.json();
+        
+//         if (data.status !== "1") {
+//             throw new Error(`Failed to fetch ABI: ${data.message}`);
+//         }
+
+//         const abi = JSON.parse(data.result);
+
+//         // Check if it's a proxy contract (Etherscan labels proxies)
+//         const proxyCheckAPI = `https://api.etherscan.io/api?module=contract&action=getsourcecode&address=${contractAddress}&apikey=${ETHERSCAN_API_KEY}`;
+//         const proxyResponse = await fetch(proxyCheckAPI);
+//         const proxyData = await proxyResponse.json();
+
+//         if (proxyData.status === "1" && proxyData.result.length > 0) {
+//             const implementationAddress = proxyData.result[0].Implementation;
+            
+//             if (implementationAddress && implementationAddress !== "0x") {
+//                 console.log(`Proxy detected. Fetching ABI of implementation contract: ${implementationAddress}`);
+//                 return await getContractABI(implementationAddress);
+//             }
+//         }
+
+//         return abi;
+//     } catch (error) {
+//         console.error("Error fetching contract ABI:", error);
+//         return null;
+//     }
+// }
 
 /**
  * Encodes function data for a contract call.
@@ -79,5 +112,10 @@ const contractAddress = "0xBB9bc244D798123fDe783fCc1C72d3Bb8C189413";
 const functionName = "approve";
 const functionArgs = ["0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D", "1"];
 
-encodedDataFunction(contractAddress, functionName, functionArgs);
+// encodedDataFunction(contractAddress, functionName, functionArgs);
 module.exports = { encodedDataFunction };
+
+
+getContractABI("0x65702FD8B3C5dd7bC11B1dEAE690f9a6Bb11466f").then((abi) => {
+    console.log("ABI:", abi);
+  });
