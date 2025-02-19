@@ -105,12 +105,11 @@ interface IDAO {
 
     /**
      * @dev Withdraws Ether from the DAO treasury.
-     * @param _from The address from which the Ether is withdrawn.
      * @param _to The recipient address for the Ether.
      * @param amount The amount of Ether to withdraw.
      */
     function withdrawFromDAOTreasury(
-        address _from,
+      
         address _to,
         uint256 amount
     ) external;

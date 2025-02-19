@@ -1,7 +1,7 @@
 require("@nomicfoundation/hardhat-toolbox");
 require('@openzeppelin/hardhat-upgrades');
 require("@nomicfoundation/hardhat-verify");
-
+require("dotenv").config();
 /** @type import('hardhat/config').HardhatUserConfig */
 module.exports = {
   solidity: "0.8.28",
@@ -21,7 +21,7 @@ module.exports = {
     // }
   },
   etherscan: {
-    apiKey: "NCK76P88P8MFMTQE66ZQ8XKVRAX6337NHC"
+    apiKey: process.env.ETHERSCAN_API_KEY
   },
   sourcify: {
     enabled: true
