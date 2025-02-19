@@ -141,7 +141,7 @@ async function encodeWithdrawTokens(daoAddr, token, to, amount) {
 async function encodeFunctionABIData(abi, functionName, functionArgs) {
     try {
         const contractInterface = new ethers.Interface(abi);
-        return contractInterface.encodeFunctionData(functionName, functionArgs);
+        return contractInterface.encodeFunctionData(functionName, functionArgs); // Return the encoded function data
     } catch (error) {
         console.error(`Error encoding function data for ${functionName}:`, error);
         return null;
