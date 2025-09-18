@@ -22,7 +22,6 @@ async function getImplementationAddress(proxyAddress) {
     try {
         const implStorage = await provider.getStorage(proxyAddress, IMPLEMENTATION_SLOT);
         if (!implStorage || implStorage === "0x") throw new Error("No implementation found at the slot.");
-        
         const implAddress = ethers.getAddress("0x" + implStorage.slice(-40));
         console.log(`Implementation Address: ${implAddress}`);
         return implAddress;
@@ -81,6 +80,7 @@ async function displayContractMethods(proxyAddress) {
  * @param {string} functionName - The name of the function to encode.
  * @param {Array} functionArgs - The arguments to pass to the function.
  */
+
 async function encodeFunctionCall(proxyAddress, functionName, functionArgs) {
     try {
         const abi = await fetchImplementationABI(proxyAddress);
