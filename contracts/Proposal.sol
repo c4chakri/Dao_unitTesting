@@ -5,7 +5,6 @@
  * @dev Handles the lifecycle of a proposal within a DAO, including creation, voting, and execution of associated actions.
  */
 pragma solidity ^0.8.21;
-
 import {ERC20Votes} from "@openzeppelin/contracts/token/ERC20/extensions/ERC20Votes.sol";
 import {IProposal} from "./IProposal.sol";
 import {DAO} from "./Dao.sol";
@@ -25,7 +24,7 @@ contract Proposal is IProposal {
     uint32 public startTime; // Proposal start time
     uint32 public endTime; // Proposal end time
 
-    uint8 public status; // Current status of the proposal: 0 (not started), 1 (active), 2 (approved), 3 (executed)
+    uint8 public status; // Current status of the proposal: 0 (not started), 1 (active), 2 (approved), 3 (executed) , 4 (rejected) , 5 (resolved), 6 (revoked)
     uint8 public minimumParticipationPercentage; // Minimum participation required for the proposal
     uint8 public supportThresholdPercentage; // Minimum "yes" vote percentage for approval
     uint256 public minimumDurationForProposal; // Minimum duration for proposal voting
@@ -37,8 +36,10 @@ contract Proposal is IProposal {
     Action[] public actions; // List of actions to execute upon proposal approval
 
     uint256 public minApproval; // Minimum approval required for multi-signature DAOs
+    uint256 public currentVotingRound;
+    mapping(uint256 => mapping(address => bool)) public votedInRound;
 
-    mapping(address => bool) public hasVoted; // Tracks whether an address has voted
+    // mapping(address => bool) public hasVoted; // Tracks whether an address has voted
 
     // Errors
     error InvalidVoteType(string expected, uint256 actual);
@@ -49,6 +50,7 @@ contract Proposal is IProposal {
     error NotStarted();
     error AlreadyVoted();
     error ProposalAlreadyExecuted();
+    error ProposalNotActive();
     error VotingEnded();
     error ProposalNotApproved();
     error ActionExecutionFailed();
@@ -57,16 +59,24 @@ contract Proposal is IProposal {
     /**
      * @dev Ensures that the caller is authorized and the proposal is in a valid voting state.
      */
+    // modifier canVote() {
+    //     require(dao.canInteract(msg.sender), UnAuthorized());
+    //     require(status > 0, ProposalNotExist());
+    //     require(!executed, ProposalAlreadyExecuted());
+    //     require(!hasVoted[msg.sender], AlreadyVoted());
+    //     require(block.timestamp >= startTime, NotStarted());
+    //     require(block.timestamp <= endTime, VotingEnded());
+    //     _;
+    // }
     modifier canVote() {
         require(dao.canInteract(msg.sender), UnAuthorized());
         require(status > 0, ProposalNotExist());
         require(!executed, ProposalAlreadyExecuted());
-        require(!hasVoted[msg.sender], AlreadyVoted());
+        require(!votedInRound[currentVotingRound][msg.sender], AlreadyVoted());
         require(block.timestamp >= startTime, NotStarted());
         require(block.timestamp <= endTime, VotingEnded());
         _;
     }
-
     /**
      * @dev Ensures that the proposal is eligible for execution.
      */
@@ -159,22 +169,7 @@ contract Proposal is IProposal {
      * @return The number of voting units the account possesses.
      */
 
-    function _getVotingUnits(address account) public view returns (uint256) {
-    if (dao.isMultiSignDAO()) {
-        return 1;
-    } else {
-        ERC20Votes erc20 = ERC20Votes(governanceTokenAddress);
-
-        // Calculate votes based on delegation status
-        if (erc20.delegates(account) == address(0)) {
-            return erc20.balanceOf(account) + erc20.getVotes(account);
-        } else if (erc20.delegates(account) == account) {
-            return erc20.getVotes(account);
-        } else {
-            return 0; // Votes delegated to another account
-        }
-    }
-}
+  
 
     /**
      * @dev Allows an eligible user to cast their vote on the proposal.
@@ -211,7 +206,8 @@ contract Proposal is IProposal {
             });
         }
 
-        hasVoted[msg.sender] = true;
+        // hasVoted[msg.sender] = true;
+        votedInRound[currentVotingRound][msg.sender] = true;
 
         if (dao.isMultiSignDAO()) {
             if (yesVotes >= minApproval) {
@@ -229,15 +225,9 @@ contract Proposal is IProposal {
             uint256 tokenParticipation = (totalVotes * 100) / totalSupply;
             uint256 yesVotesPercentage = (yesVotes * 100) / totalVotes;
 
-            if (
-                yesVotesPercentage >= supportThresholdPercentage &&
-                tokenParticipation >= minimumParticipationPercentage
-            ) {
-                approved = yesVotes > noVotes;
-                status = 2;
-            } else {
-                approved = false;
-            }
+            approved = (yesVotesPercentage >= supportThresholdPercentage &&
+                tokenParticipation >= minimumParticipationPercentage &&
+                yesVotes > noVotes);
         }
     }
 
@@ -266,5 +256,110 @@ contract Proposal is IProposal {
                 require(success, ActionExecutionFailed());
             }
         }
+    }
+
+    /**
+     * @dev Resolves the proposal after voting has ended.
+     *
+     * Requirements:
+     * - Voting must be finished.
+     * - Proposal must not be executed or revoked.
+     *
+     * Effects:
+     * - Finalizes the proposal as approved or rejected.
+     * - Sets status to 5 (Resolved).
+     */
+    function resolveProposal() external {
+        require(
+            msg.sender == proposerAddress || dao.canInteract(msg.sender),
+            UnAuthorized()
+        );
+        require(block.timestamp > endTime, VotingEnded());
+        require(!executed, ProposalAlreadyExecuted());
+        require(status == 1 || status == 2, ProposalNotActive());
+
+        if (dao.isMultiSignDAO()) {
+            approved = (yesVotes >= minApproval);
+        } else {
+            uint256 totalSupply = ERC20Votes(governanceTokenAddress)
+                .totalSupply();
+            require(totalSupply > 0, ZeroSupply());
+
+            uint256 totalVotes = yesVotes + noVotes + abstainVotes;
+            uint256 tokenParticipation = (totalVotes * 100) / totalSupply;
+            uint256 yesVotesPercentage = (yesVotes * 100) / totalVotes;
+
+            approved = (yesVotesPercentage >= supportThresholdPercentage &&
+                tokenParticipation >= minimumParticipationPercentage &&
+                yesVotes > noVotes);
+        }
+
+        status = 5;
+    }
+
+    /**
+     * @dev Revokes the proposal, preventing further execution.
+     *
+     * Requirements:
+     * - Can only be called by the proposer or DAO admin.
+     * - Proposal must not be already executed.
+     */
+    function revokeProposal() external {
+        require(!executed, ProposalAlreadyExecuted());
+        require(
+            msg.sender == proposerAddress || dao.canInteract(msg.sender),
+            UnAuthorized()
+        );
+
+        status = 6;
+        approved = false;
+        executed = false;
+    }
+
+    /**
+     * @dev Challenges and rewrites a proposal, forcing re-voting with updated data.
+     *
+     * Requirements:
+     * - Only DAO members or proposer can challenge.
+     * - Proposal must be active or approved, but not executed/revoked.
+     *
+     * Effects:
+     * - Marks proposal as challenged, then rewrites title/description/actions.
+     * - Resets votes and voter records by moving to a new voting round.
+     * - Sets new voting window.
+     */
+    function challengeProposal(
+        string memory _newTitle,
+        string memory _newDescription,
+        Action[] memory _newActions,
+        uint32 _newDuration
+    ) external {
+        require(dao.canInteract(msg.sender), UnAuthorized());
+        require(status == 1 || status == 2, ProposalNotActive());
+        require(!executed, ProposalAlreadyExecuted());
+
+        approved = false;
+        yesVotes = 0;
+        noVotes = 0;
+        abstainVotes = 0;
+
+        currentVotingRound += 1;
+
+        proposalTitle = _newTitle;
+        proposalDescription = _newDescription;
+
+        delete actions;
+        for (uint8 i = 0; i < _newActions.length; i++) {
+            actions.push(_newActions[i]);
+        }
+
+        startTime = uint32(block.timestamp);
+        endTime = startTime + _newDuration;
+
+        status = 1;
+    }
+
+    function _getVotingUnits(address _address) internal view returns (uint256) {
+        return ERC20Votes(governanceTokenAddress).balanceOf(_address);
     }
 }
