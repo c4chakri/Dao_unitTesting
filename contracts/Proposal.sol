@@ -87,7 +87,13 @@ contract Proposal is IProposal {
      * @param _description Description of the proposal.
      * @param _startTime Start time for voting on the proposal.
      * @param _duration Duration for which voting is allowed.
-     * @param actionId ID of the action associated with the proposal.
+     * @param actionId ID of the action associated with the proposal.  
+     *  Mint,           // 0
+        Withdraw,       // 1
+        AddDaoMembers,  // 2
+        RemoveDaoMembers, // 3
+        DaoSetting,     // 4
+        Burn            // 5
      * @param _actions Array of actions to be executed if the proposal is approved.
      *
      * Requirements:
@@ -266,5 +272,18 @@ contract Proposal is IProposal {
                 require(success, ActionExecutionFailed());
             }
         }
+    }
+
+    /**
+     * @dev Returns the status of the proposal.
+     *
+     * @return The status of the proposal:
+     * - 0: Not started
+     * - 1: In progress
+     * - 2: Approved
+     * - 3: Executed
+     */
+    function getStatus() public view returns (uint256) {
+        return status;
     }
 }
