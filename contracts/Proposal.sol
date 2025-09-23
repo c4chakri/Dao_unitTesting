@@ -15,7 +15,7 @@ contract Proposal is IProposal {
     address public daoAddress; // Address of the associated DAO contract
     address public proposerAddress; // Address of the proposal creator
     address public governanceTokenAddress; // Address of the governance token
-
+    uint256 public currentVotingRound; // Current voting round for the proposal
     string public proposalTitle; // Title of the proposal
     string public proposalDescription; // Description of the proposal
 
@@ -52,6 +52,8 @@ contract Proposal is IProposal {
     error VotingEnded();
     error ProposalNotApproved();
     error ActionExecutionFailed();
+    error ProposalNotActive();
+
 
     // Modifiers
     /**
@@ -286,4 +288,95 @@ contract Proposal is IProposal {
     function getStatus() public view returns (uint256) {
         return status;
     }
+
+     function resolveProposal() external {
+        require(
+            msg.sender == proposerAddress || dao.canInteract(msg.sender),
+            UnAuthorized()
+        );
+        require(block.timestamp > endTime, VotingEnded());
+        require(!executed, ProposalAlreadyExecuted());
+        require(status == 1 || status == 2, ProposalNotActive());
+
+        if (dao.isMultiSignDAO()) {
+            approved = (yesVotes >= minApproval);
+        } else {
+            uint256 totalSupply = ERC20Votes(governanceTokenAddress)
+                .totalSupply();
+            require(totalSupply > 0, ZeroSupply());
+
+            uint256 totalVotes = yesVotes + noVotes + abstainVotes;
+            uint256 tokenParticipation = (totalVotes * 100) / totalSupply;
+            uint256 yesVotesPercentage = (yesVotes * 100) / totalVotes;
+
+            approved = (yesVotesPercentage >= supportThresholdPercentage &&
+                tokenParticipation >= minimumParticipationPercentage &&
+                yesVotes > noVotes);
+        }
+
+        status = 5;
+    }
+
+    /**
+     * @dev Revokes the proposal, preventing further execution.
+     *
+     * Requirements:
+     * - Can only be called by the proposer or DAO admin.
+     * - Proposal must not be already executed.
+     */
+    function revokeProposal() external {
+        require(!executed, ProposalAlreadyExecuted());
+        require(
+            msg.sender == proposerAddress || dao.canInteract(msg.sender),
+            UnAuthorized()
+        );
+
+        status = 6;
+        approved = false;
+        executed = false;
+    }
+
+    /**
+     * @dev Challenges and rewrites a proposal, forcing re-voting with updated data.
+     *
+     * Requirements:
+     * - Only DAO members or proposer can challenge.
+     * - Proposal must be active or approved, but not executed/revoked.
+     *
+     * Effects:
+     * - Marks proposal as challenged, then rewrites title/description/actions.
+     * - Resets votes and voter records by moving to a new voting round.
+     * - Sets new voting window.
+     */
+    function challengeProposal(
+        string memory _newTitle,
+        string memory _newDescription,
+        Action[] memory _newActions,
+        uint32 _newDuration
+    ) external {
+        require(dao.canInteract(msg.sender), UnAuthorized());
+        require(status == 1 || status == 2, ProposalNotActive());
+        require(!executed, ProposalAlreadyExecuted());
+
+        approved = false;
+        yesVotes = 0;
+        noVotes = 0;
+        abstainVotes = 0;
+
+        currentVotingRound += 1;
+
+        proposalTitle = _newTitle;
+        proposalDescription = _newDescription;
+
+        delete actions;
+        for (uint8 i = 0; i < _newActions.length; i++) {
+            actions.push(_newActions[i]);
+        }
+
+        startTime = uint32(block.timestamp);
+        endTime = startTime + _newDuration;
+
+        status = 1;
+    }
+
 }
