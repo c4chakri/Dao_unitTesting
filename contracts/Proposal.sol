@@ -158,6 +158,9 @@ contract Proposal is IProposal {
         for (uint8 i = 0; i < _actions.length; i++) {
             actions.push(_actions[i]);
         }
+        if(actionId == 6){ // if action is Rate card actions
+            status = 2;
+        }
     }
 
     /**
